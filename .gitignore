@@ -1,5 +1,8 @@
 .env
+.env.local
 secrets/
+*.pem
+*.p12
 data/edgar_cache/
 __pycache__/
 *.pyc

@@ -8,8 +8,9 @@
 [![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-orchestration-1C3C3C?style=flat-square)](https://github.com/langchain-ai/langgraph)
 [![GCP](https://img.shields.io/badge/GCP-Cloud%20Run-4285F4?style=flat-square&logo=googlecloud&logoColor=white)](https://cloud.google.com/run)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[Features](#features) · [Status](#project-status) · [Architecture](#architecture) · [Quick start](#quick-start) · [Deploy](#deployment)
+[Features](#features) · [Status](#project-status) · [Architecture](#architecture) · [Quick start](#quick-start) · [Deploy](#deployment) · [Security](#security--secrets) · [License](#license)
 
 </div>
 
@@ -191,6 +192,25 @@ supply-chain-risk-monitor/
 ├── docker-compose.yml
 └── .github/workflows/deploy.yml
 ```
+
+---
+
+## Security & secrets
+
+| Check | Status |
+| --- | --- |
+| `.env` tracked | No — `.env` is gitignored |
+| `secrets/` (e.g. GCP JSON keys) tracked | No — directory gitignored |
+| Real API keys in source | None found; `.env.example` uses placeholders only (`sk-...`, `...`) |
+| CI/CD | Workflow uses `${{ secrets.* }}`; values live in **GitHub → Settings → Secrets and variables → Actions** |
+
+`docker-compose.yml` uses `POSTGRES_PASSWORD=postgres` **for local development only**. Use strong credentials for any shared or production database.
+
+---
+
+## License
+
+Released under the [MIT License](LICENSE).
 
 ---
 
