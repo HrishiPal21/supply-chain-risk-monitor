@@ -9,9 +9,61 @@
 [![LangGraph](https://img.shields.io/badge/LangGraph-orchestration-1C3C3C?style=flat-square)](https://github.com/langchain-ai/langgraph)
 [![GCP](https://img.shields.io/badge/GCP-Cloud%20Run-4285F4?style=flat-square&logo=googlecloud&logoColor=white)](https://cloud.google.com/run)
 
-[Features](#-features) · [Architecture](#-architecture) · [Quick start](#-quick-start) · [Deploy](#-deployment)
+[Features](#features) · [Status](#project-status) · [Architecture](#architecture) · [Quick start](#quick-start) · [Deploy](#deployment)
 
 </div>
+
+---
+
+## Project status
+
+### Day 1 — shipped
+
+End-to-end **scaffold**: every module is wired and importable (no stub-only paths).
+
+| Area | What exists today |
+| --- | --- |
+| **LLM & orchestration** | GPT-4o · LangGraph graph with `data_retriever` → parallel **bear / bull / geopolitical** analysts → **judge** → **guardrail** · `run_pipeline()` in [`agents/graph.py`](agents/graph.py) |
+| **RAG & memory** | Pinecone + OpenAI `text-embedding-3-small` · cached index client ([`tools/pinecone_client.py`](tools/pinecone_client.py)) |
+| **Data layer** | RSS (curated feeds), SEC EDGAR, NewsAPI · deduped retrieval in [`agents/nodes/data_retriever.py`](agents/nodes/data_retriever.py) |
+| **Persistence** | PostgreSQL schema ([`db/schema.sql`](db/schema.sql)) · Cloud SQL–compatible client ([`tools/postgres_db.py`](tools/postgres_db.py)) · GCS helper ([`tools/gcs_client.py`](tools/gcs_client.py)) |
+| **UI** | Streamlit · [`pages/1_Search.py`](pages/1_Search.py), [`pages/2_Results.py`](pages/2_Results.py), [`pages/3_GuardRail.py`](pages/3_GuardRail.py) · [`config.py`](config.py) for env |
+| **Ops** | [`Dockerfile`](Dockerfile) (Cloud Run–style `PORT`) · [`docker-compose.yml`](docker-compose.yml) (app + Postgres 16 + schema on init) · [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) → GCR → Cloud Run |
+
+Detailed file-by-file notes and bugfix history live in [`PROJECT_LOG.md`](PROJECT_LOG.md).
+
+### Day 2 — next up
+
+**Priority 1 — runnable locally**
+
+- [ ] Copy [`.env.example`](.env.example) → `.env` and set `OPENAI_API_KEY`, `PINECONE_*`, `NEWS_API_KEY`
+- [ ] `docker compose up` — Postgres up, schema applies cleanly
+- [ ] `pip install -r requirements.txt` in a venv — no import errors
+- [ ] One end-to-end query from **Search** via `streamlit run app.py`
+
+**Priority 2 — validate the LangGraph pipeline**
+
+- [ ] Smoke test `run_pipeline("semiconductor supply from Taiwan")` in a Python shell
+- [ ] Confirm all three analyst outputs are non-`None` before the judge runs
+- [ ] Confirm judge JSON includes integer `risk_score`
+- [ ] Confirm `guardrail_report` persists to Postgres as structured data (dict), not an opaque string
+
+**Priority 3 — GCP foundation (ahead of production deploy)**
+
+- [ ] GCP project + APIs: Cloud Run, Cloud SQL, GCS, Secret Manager
+- [ ] Cloud SQL Postgres 16 + connection name
+- [ ] GCS bucket (e.g. `supply-chain-risk-raw`)
+- [ ] Service account (Cloud SQL Client, Storage Object Admin) → `secrets/gcp_service_account.json` (gitignored)
+- [ ] GitHub Actions secrets: `GCP_SA_KEY`, `GCP_PROJECT_ID`, `CLOUD_SQL_CONNECTION_NAME`, DB + API secrets
+
+**Known gaps queued after Day 2 validation**
+
+| Gap | Notes |
+| --- | --- |
+| Context length | No hard token guard before GPT-4o — very long EDGAR filings may overflow context |
+| RSS | Feed URLs need live validation; some sources (e.g. FT) may require a subscription |
+| Resilience | No OpenAI retry/backoff yet — rate limits will show up under load |
+| Results UI cache | [`pages/2_Results.py`](pages/2_Results.py) cached reads — new runs may need refresh or TTL UX |
 
 ---
 
@@ -139,12 +191,6 @@ supply-chain-risk-monitor/
 ├── docker-compose.yml
 └── .github/workflows/deploy.yml
 ```
-
----
-
-## Roadmap / notes
-
-Token limits on very long EDGAR filings, RSS URL validation, and OpenAI retry logic are called out in [`PROJECT_LOG.md`](PROJECT_LOG.md).
 
 ---
 
