@@ -31,8 +31,6 @@ End-to-end **scaffold**: every module is wired and importable (no stub-only path
 | **UI** | Streamlit · [`pages/1_Search.py`](pages/1_Search.py), [`pages/2_Results.py`](pages/2_Results.py), [`pages/3_GuardRail.py`](pages/3_GuardRail.py) · [`config.py`](config.py) for env |
 | **Ops** | [`Dockerfile`](Dockerfile) (Cloud Run–style `PORT`) · [`docker-compose.yml`](docker-compose.yml) (app + Postgres 16 + schema on init) · [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) → GCR → Cloud Run |
 
-Detailed file-by-file notes and bugfix history live in [`PROJECT_LOG.md`](PROJECT_LOG.md).
-
 ### Day 2 — next up
 
 **Priority 1 — runnable locally**
