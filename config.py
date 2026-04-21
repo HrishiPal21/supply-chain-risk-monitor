@@ -30,6 +30,9 @@ POSTGRES_USER: str = os.environ.get("POSTGRES_USER", "postgres")
 POSTGRES_PASSWORD: str = os.environ.get("POSTGRES_PASSWORD", "")
 CLOUD_SQL_CONNECTION_NAME: str = os.environ.get("CLOUD_SQL_CONNECTION_NAME", "")
 
+# SEC EDGAR
+EDGAR_EMAIL: str = os.environ.get("EDGAR_EMAIL", "user@example.com")
+
 # GCP Cloud Storage
 GCS_BUCKET_NAME: str = os.environ.get("GCS_BUCKET_NAME", "supply-chain-risk-raw")
 GCP_PROJECT_ID: str = os.environ.get("GCP_PROJECT_ID", "")
