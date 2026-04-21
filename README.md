@@ -211,11 +211,3 @@ supply-chain-risk-monitor/
 ## License
 
 Released under the [MIT License](LICENSE).
-
----
-
-<div align="center">
-
-**Built with LangGraph · GPT-4o · Pinecone · GCP**
-
-</div>
