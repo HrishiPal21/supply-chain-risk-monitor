@@ -1,4 +1,7 @@
+import logging
 import streamlit as st
+
+logging.basicConfig(level=logging.WARNING, format="%(name)s %(levelname)s: %(message)s")
 
 st.set_page_config(
     page_title="Supply Chain Risk Monitor",
