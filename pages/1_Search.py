@@ -115,6 +115,9 @@ if submitted and query.strip():
             score = result.get("risk_score") or 0
             label = (result.get("final_output") or {}).get("risk_label", "")
             st.success(f"**Risk Score: {score:.0f}/100 — {label}**  ·  View full breakdown on the Results page.")
+            if result.get("partial_context"):
+                failed = ", ".join(result.get("failed_sources", []))
+                st.warning(f"⚠️ Partial context — some sources failed: **{failed}**. Results may be incomplete.")
         except Exception as e:
             status.update(label="❌ Pipeline error", state="error")
             st.error(f"{e}")

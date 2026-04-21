@@ -49,11 +49,13 @@ def save_run(state: dict) -> int:
         INSERT INTO runs (
             query, company, region, risk_score, risk_label,
             judge_verdict, bear_analysis, bull_analysis,
-            geopolitical_analysis, guardrail_report, final_output, created_at
+            geopolitical_analysis, guardrail_report, final_output,
+            partial_context, failed_sources, created_at
         ) VALUES (
             %(query)s, %(company)s, %(region)s, %(risk_score)s, %(risk_label)s,
             %(judge_verdict)s, %(bear_analysis)s, %(bull_analysis)s,
-            %(geopolitical_analysis)s, %(guardrail_report)s, %(final_output)s, %(created_at)s
+            %(geopolitical_analysis)s, %(guardrail_report)s, %(final_output)s,
+            %(partial_context)s, %(failed_sources)s, %(created_at)s
         ) RETURNING id;
     """
     params = {
@@ -68,6 +70,8 @@ def save_run(state: dict) -> int:
         "geopolitical_analysis": state.get("geopolitical_analysis", ""),
         "guardrail_report": Json(state.get("guardrail_report") or {}),
         "final_output": Json(state.get("final_output") or {}),
+        "partial_context": bool(state.get("partial_context", False)),
+        "failed_sources": state.get("failed_sources") or [],
         "created_at": datetime.utcnow().isoformat(),
     }
     with _conn() as con:

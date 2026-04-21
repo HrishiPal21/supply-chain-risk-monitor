@@ -67,5 +67,7 @@ def run_pipeline(query: str, company: str = "", region: str = "") -> AgentState:
         "risk_score": None,
         "guardrail_report": None,
         "final_output": None,
+        "partial_context": False,
+        "failed_sources": [],
     }
     return pipeline.invoke(initial_state)

@@ -18,23 +18,24 @@ def fetch_news(query: str, page_size: int = 20) -> list[dict]:
         "apiKey": NEWS_API_KEY,
     }
 
+    last_exc: Exception | None = None
     for attempt, delay in enumerate(_DELAYS, 1):
         try:
             resp = requests.get(_BASE_URL, params=params, timeout=10)
             if resp.status_code == 429 or resp.status_code >= 500:
-                if attempt == len(_DELAYS):
-                    return []
-                time.sleep(delay)
+                last_exc = RuntimeError(f"NewsAPI HTTP {resp.status_code}")
+                if attempt < len(_DELAYS):
+                    time.sleep(delay)
                 continue
             resp.raise_for_status()
             articles = resp.json().get("articles", [])
             break
-        except requests.RequestException:
-            if attempt == len(_DELAYS):
-                return []
-            time.sleep(delay)
+        except requests.RequestException as e:
+            last_exc = e
+            if attempt < len(_DELAYS):
+                time.sleep(delay)
     else:
-        return []
+        raise last_exc or RuntimeError("NewsAPI failed after retries")
 
     docs = []
     for art in articles:
