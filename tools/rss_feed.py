@@ -1,7 +1,7 @@
 import feedparser
+import requests
 from datetime import datetime
 
-# Curated supply-chain-relevant RSS feeds
 RSS_FEEDS = {
     "Reuters Business": "https://feeds.reuters.com/reuters/businessNews",
     "FT Markets": "https://www.ft.com/rss/home/uk",
@@ -10,15 +10,22 @@ RSS_FEEDS = {
     "Trade Finance Global": "https://www.tradefinanceglobal.com/feed/",
 }
 
+_HEADERS = {"User-Agent": "SupplyChainRiskMonitor/1.0"}
+
+
+def _fetch_feed(url: str) -> feedparser.FeedParserDict:
+    resp = requests.get(url, timeout=8, headers=_HEADERS)
+    resp.raise_for_status()
+    return feedparser.parse(resp.content)
+
 
 def fetch_rss(query: str, max_per_feed: int = 5) -> list[dict]:
-    """Pull recent entries from all RSS feeds, filter by query keywords."""
     keywords = {w.lower() for w in query.split() if len(w) > 3}
     docs = []
 
     for feed_name, feed_url in RSS_FEEDS.items():
         try:
-            feed = feedparser.parse(feed_url)
+            feed = _fetch_feed(feed_url)
         except Exception:
             continue
 
@@ -28,14 +35,12 @@ def fetch_rss(query: str, max_per_feed: int = 5) -> list[dict]:
             combined = f"{title} {summary}".lower()
 
             if not keywords or any(kw in combined for kw in keywords):
-                docs.append(
-                    {
-                        "source": f"RSS/{feed_name}",
-                        "text": f"{title}. {summary}"[:1500],
-                        "url": entry.get("link", ""),
-                        "published_at": _parse_date(entry),
-                    }
-                )
+                docs.append({
+                    "source": f"RSS/{feed_name}",
+                    "text": f"{title}. {summary}"[:1500],
+                    "url": entry.get("link", ""),
+                    "published_at": _parse_date(entry),
+                })
                 if len([d for d in docs if d["source"] == f"RSS/{feed_name}"]) >= max_per_feed:
                     break
 

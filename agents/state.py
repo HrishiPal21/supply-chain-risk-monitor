@@ -13,3 +13,5 @@ class AgentState(TypedDict):
     risk_score: Optional[float]       # 0-100, higher = more risk
     guardrail_report: Optional[dict]  # trust scores + flagged claims
     final_output: Optional[dict]
+    partial_context: bool             # True if any data source failed
+    failed_sources: list[str]         # names of sources that errored

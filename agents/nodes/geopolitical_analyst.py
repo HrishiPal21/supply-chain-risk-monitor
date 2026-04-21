@@ -1,5 +1,6 @@
 from agents.state import AgentState
 from config import get_openai_client, OPENAI_MODEL
+from tools.retry import chat_with_retry
 
 SYSTEM_PROMPT = """You are a Geopolitical Analyst specializing in how political
 events, conflicts, trade policy, and diplomatic relations affect global supply chains.
@@ -24,7 +25,7 @@ def geopolitical_analyst(state: AgentState) -> AgentState:
     client = get_openai_client()
     context = _format_docs(state["retrieved_docs"])
 
-    response = client.chat.completions.create(
+    response = chat_with_retry(client,
         model=OPENAI_MODEL,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},

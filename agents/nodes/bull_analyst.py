@@ -1,5 +1,6 @@
 from agents.state import AgentState
 from config import get_openai_client, OPENAI_MODEL
+from tools.retry import chat_with_retry
 
 SYSTEM_PROMPT = """You are a Bull Analyst specializing in supply chain resilience.
 Identify mitigating factors, strengths, and best-case scenarios in the provided
@@ -25,7 +26,7 @@ def bull_analyst(state: AgentState) -> AgentState:
     client = get_openai_client()
     context = _format_docs(state["retrieved_docs"])
 
-    response = client.chat.completions.create(
+    response = chat_with_retry(client,
         model=OPENAI_MODEL,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},

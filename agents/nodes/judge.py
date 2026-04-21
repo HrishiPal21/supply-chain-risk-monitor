@@ -1,6 +1,7 @@
 import json
 from agents.state import AgentState
 from config import get_openai_client, OPENAI_MODEL
+from tools.retry import chat_with_retry
 
 SYSTEM_PROMPT = """You are a Chief Risk Officer adjudicating a structured debate
 between three analysts (Bear, Bull, Geopolitical) about a supply chain risk query.
@@ -34,7 +35,7 @@ Output ONLY valid JSON in this exact schema:
 def judge(state: AgentState) -> AgentState:
     client = get_openai_client()
 
-    response = client.chat.completions.create(
+    response = chat_with_retry(client,
         model=OPENAI_MODEL,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},

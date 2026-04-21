@@ -1,6 +1,7 @@
 import json
 from agents.state import AgentState
 from config import get_openai_client, OPENAI_MODEL
+from tools.retry import chat_with_retry
 
 SYSTEM_PROMPT = """You are a Guardrail Meta-Agent responsible for quality control
 of a multi-agent supply chain risk analysis system.
@@ -39,7 +40,7 @@ def guardrail(state: AgentState) -> AgentState:
         for d in state["retrieved_docs"][:10]
     )
 
-    response = client.chat.completions.create(
+    response = chat_with_retry(client,
         model=OPENAI_MODEL,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
