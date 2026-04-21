@@ -1,5 +1,6 @@
 .env
 .env.local
+PROJECT_LOG.md
 secrets/
 *.pem
 *.p12
