@@ -27,8 +27,11 @@ st.markdown("""
         background: linear-gradient(180deg, #0f2444 0%, #1a3a5c 100%);
         border-right: none;
     }
+    [data-testid="stSidebar"] * { color: #e2edf7 !important; }
     [data-testid="stSidebarNav"] a { color: #a8c4e0 !important; font-size: 0.9rem; }
     [data-testid="stSidebarNav"] a:hover { color: #ffffff !important; }
+    [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] { background: rgba(255,255,255,0.08) !important; border-color: rgba(255,255,255,0.2) !important; }
+    [data-testid="stSidebar"] button { background: rgba(255,255,255,0.12) !important; border-color: rgba(255,255,255,0.25) !important; color: #fff !important; }
     header[data-testid="stHeader"] { background: transparent; }
 
     .hero {
@@ -52,7 +55,6 @@ st.markdown("""
         transition: box-shadow 0.2s, transform 0.2s;
     }
     .card:hover { box-shadow: 0 4px 12px rgba(15,36,68,0.12); transform: translateY(-2px); }
-    .card .icon { font-size: 1.8rem; margin-bottom: 0.6rem; }
     .card h3 { color: #0f2444; font-size: 0.95rem; font-weight: 700; margin: 0 0 0.35rem 0; }
     .card p { color: #64748b; font-size: 0.82rem; margin: 0; line-height: 1.5; }
 
@@ -69,28 +71,24 @@ st.markdown("""
 </style>
 
 <div class="hero">
-    <h1>⚠️ Supply Chain Risk Monitor</h1>
+    <h1>Supply Chain Risk Monitor</h1>
     <p>Multi-agent LangGraph pipeline · GPT-4o · Pinecone RAG · Real-time data</p>
 </div>
 
 <div class="card-grid">
     <div class="card">
-        <div class="icon">🔍</div>
         <h3>Search</h3>
         <p>Pick a scenario or build a custom query. 7-agent pipeline runs automatically.</p>
     </div>
     <div class="card">
-        <div class="icon">🎯</div>
         <h3>Exposure</h3>
         <p>Company-specific exposure assessment — how directly are YOU affected?</p>
     </div>
     <div class="card">
-        <div class="icon">📊</div>
         <h3>Results</h3>
         <p>Risk score, analyst debate, judge verdict, and recommended actions.</p>
     </div>
     <div class="card">
-        <div class="icon">🛡️</div>
         <h3>GuardRail</h3>
         <p>Trust scores, hallucination flags, and confidence bands per agent.</p>
     </div>

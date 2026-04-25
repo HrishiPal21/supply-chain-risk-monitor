@@ -14,8 +14,11 @@ st.markdown("""
 
     [data-testid="stAppViewContainer"] { background: #f0f4f8; }
     [data-testid="stSidebar"] { background: linear-gradient(180deg, #0f2444 0%, #1a3a5c 100%); border-right: none; }
+    [data-testid="stSidebar"] * { color: #e2edf7 !important; }
     [data-testid="stSidebarNav"] a { color: #a8c4e0 !important; }
     [data-testid="stSidebarNav"] a:hover { color: #fff !important; }
+    [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] { background: rgba(255,255,255,0.08) !important; border-color: rgba(255,255,255,0.2) !important; }
+    [data-testid="stSidebar"] button { background: rgba(255,255,255,0.12) !important; border-color: rgba(255,255,255,0.25) !important; color: #fff !important; }
     header[data-testid="stHeader"] { background: transparent; }
 
     .page-header {
@@ -87,7 +90,7 @@ st.markdown("""
 </style>
 
 <div class="page-header">
-    <h1>🔍 Supply Chain Risk Analysis</h1>
+    <h1>Supply Chain Risk Analysis</h1>
     <p>Pick a scenario, use the guided builder, or write your own — the 7-agent pipeline does the rest.</p>
 </div>
 """, unsafe_allow_html=True)
@@ -104,17 +107,17 @@ st.markdown("""
 <div class="status-box">
     <strong style="color:#58a6ff;">Pipeline</strong>
     <div class="pipeline">
-        <span class="step">📡 Data Retriever</span>
+        <span class="step">Data Retriever</span>
         <span class="arrow">→</span>
-        <span class="step">🎯 Exposure Assessment</span>
+        <span class="step">Exposure Assessment</span>
         <span class="arrow">→</span>
-        <span class="step">🐻 Bear</span>
-        <span class="step">🐂 Bull</span>
-        <span class="step">🌍 Geopolitical</span>
+        <span class="step">Bear</span>
+        <span class="step">Bull</span>
+        <span class="step">Geopolitical</span>
         <span class="arrow">→</span>
-        <span class="step">⚖️ Judge</span>
+        <span class="step">Judge</span>
         <span class="arrow">→</span>
-        <span class="step">🛡️ GuardRail</span>
+        <span class="step">GuardRail</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -130,7 +133,7 @@ if "prefill_region" not in st.session_state:
 # ── Mode toggle ────────────────────────────────────────────────────────────────
 mode = st.radio(
     "Input mode",
-    ["🗂️ Quick Scenarios", "🧱 Guided Builder", "✏️ Custom Query"],
+    ["Quick Scenarios", "Guided Builder", "Custom Query"],
     horizontal=True,
     label_visibility="collapsed",
 )
@@ -191,13 +194,13 @@ SCENARIOS = [
     },
 ]
 
-if mode == "🗂️ Quick Scenarios":
+if mode == "Quick Scenarios":
     st.markdown('<div class="section-label">Choose a scenario to pre-fill the query</div>', unsafe_allow_html=True)
     cols = st.columns(3)
     for i, scenario in enumerate(SCENARIOS):
         with cols[i % 3]:
             if st.button(
-                f"{scenario['icon']}  {scenario['title']}\n\n_{scenario['desc']}_",
+                f"{scenario['title']}\n\n_{scenario['desc']}_",
                 key=f"tile_{i}",
                 use_container_width=True,
             ):
@@ -212,7 +215,7 @@ if mode == "🗂️ Quick Scenarios":
 # ==============================================================================
 # MODE 2 — Guided Builder
 # ==============================================================================
-elif mode == "🧱 Guided Builder":
+elif mode == "Guided Builder":
     st.markdown('<div class="section-label">Step 1 — Pick your focus</div>', unsafe_allow_html=True)
 
     INDUSTRIES = [
@@ -247,7 +250,7 @@ elif mode == "🧱 Guided Builder":
     risk_type = col3.selectbox("Risk type", RISK_TYPES)
 
     st.markdown('<div class="section-label" style="margin-top:1rem;">Step 2 — Optional company focus</div>', unsafe_allow_html=True)
-    guided_company = st.text_input("Company / Ticker (optional)", placeholder="e.g. AAPL, TSMC, NVDA")
+    guided_company = st.text_input("Company name or ticker (optional)", placeholder="e.g. Apple, Nike, AAPL, TSMC")
 
     if st.button("Build Query →", type="secondary"):
         composed = (
@@ -290,43 +293,43 @@ with st.form("query_form"):
     )
     col1, col2 = st.columns(2)
     company = col1.text_input(
-        "Company / Ticker (optional)",
+        "Company name or ticker (optional)",
         value=st.session_state.get("prefill_company", ""),
-        placeholder="e.g. AAPL",
+        placeholder="e.g. Apple, Nike, AAPL, TSMC",
     )
     region = col2.text_input(
         "Region (optional)",
         value=st.session_state.get("prefill_region", ""),
         placeholder="e.g. Taiwan, Southeast Asia",
     )
-    submitted = st.form_submit_button("▶  Run Analysis", use_container_width=True, type="primary")
+    submitted = st.form_submit_button("Run Analysis", use_container_width=True, type="primary")
 
 # ── Pipeline execution ─────────────────────────────────────────────────────────
 if submitted and query.strip():
-    with st.status("Running 6-agent pipeline…", expanded=True) as status:
+    with st.status("Running pipeline...", expanded=True) as status:
         ph_data      = st.empty()
         ph_exposure  = st.empty()
         ph_analysts  = st.empty()
         ph_judge     = st.empty()
         ph_guardrail = st.empty()
 
-        ph_data.write("📡 Fetching news, RSS, HTML sources & EDGAR filings…")
-        ph_exposure.write("⏳ Exposure assessment — queued")
-        ph_analysts.write("⏳ Bear / Bull / Geopolitical analysts — queued")
-        ph_judge.write("⏳ Judge — queued")
-        ph_guardrail.write("⏳ GuardRail — queued")
+        ph_data.write("Fetching news, RSS, HTML sources & EDGAR filings...")
+        ph_exposure.write("Exposure assessment — queued")
+        ph_analysts.write("Bear / Bull / Geopolitical analysts — queued")
+        ph_judge.write("Judge — queued")
+        ph_guardrail.write("GuardRail — queued")
 
         try:
             result = run_pipeline(query=query, company=company, region=region)
 
             doc_count = len(result.get("retrieved_docs", []))
             failed_sources = result.get("failed_sources", [])
-            ph_data.write(f"✅ Data retrieved — {doc_count} docs" + (f" (failed: {', '.join(failed_sources)})" if failed_sources else ""))
-            ph_exposure.write(f"✅ Exposure assessment — {result.get('exposure_level') or 'Unknown'}")
-            ph_analysts.write("✅ Bear / Bull / Geopolitical analysts — complete")
-            ph_judge.write(f"✅ Judge — raw score {result.get('raw_risk_score', '?'):.0f} → adjusted {result.get('risk_score', '?'):.0f}")
+            ph_data.write(f"Complete — {doc_count} docs" + (f" (failed: {', '.join(failed_sources)})" if failed_sources else ""))
+            ph_exposure.write(f"Exposure assessment — {result.get('exposure_level') or 'Unknown'}")
+            ph_analysts.write("Bear / Bull / Geopolitical analysts — complete")
+            ph_judge.write(f"Judge — raw score {result.get('raw_risk_score', '?'):.0f} → adjusted {result.get('risk_score', '?'):.0f}")
             confidence = (result.get("guardrail_report") or {}).get("overall_confidence", "?")
-            ph_guardrail.write(f"✅ GuardRail — confidence {confidence}")
+            ph_guardrail.write(f"GuardRail — confidence {confidence}")
 
             run_id = save_run(result)
             st.session_state["last_result"] = result
@@ -335,7 +338,7 @@ if submitted and query.strip():
             st.session_state["prefill_company"] = ""
             st.session_state["prefill_region"]  = ""
             run_label = f"run #{run_id}" if run_id else "session (DB offline)"
-            status.update(label=f"✅ Analysis complete — {run_label}", state="complete")
+            status.update(label=f"Analysis complete — {run_label}", state="complete")
 
             score = result.get("risk_score") or 0
             label = (result.get("final_output") or {}).get("risk_label", "")
@@ -343,16 +346,16 @@ if submitted and query.strip():
 
             if result.get("partial_context"):
                 failed = ", ".join(failed_sources)
-                st.warning(f"⚠️ Partial context — some sources failed: **{failed}**. Results may be incomplete.")
+                st.warning(f"Partial context — some sources failed: **{failed}**. Results may be incomplete.")
 
             usable_docs = [d for d in result.get("retrieved_docs", []) if (d.get("text") or "").strip()]
             if doc_count > 0 and not usable_docs:
-                st.warning("⚠️ All retrieved documents had empty text. Analysis is based on query alone — treat results with caution.")
+                st.warning("All retrieved documents had empty text. Analysis is based on query alone — treat results with caution.")
             elif doc_count == 0:
-                st.warning("⚠️ No documents were retrieved. Analysis is based on query alone — treat results with caution.")
+                st.warning("No documents were retrieved. Analysis is based on query alone — treat results with caution.")
 
         except Exception as e:
-            status.update(label="❌ Pipeline error", state="error")
+            status.update(label="Pipeline error", state="error")
             st.error(f"{e}")
 elif submitted:
     st.warning("Please enter a query.")

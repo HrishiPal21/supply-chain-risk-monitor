@@ -10,8 +10,11 @@ st.markdown("""
 
     [data-testid="stAppViewContainer"] { background: #f0f4f8; }
     [data-testid="stSidebar"] { background: linear-gradient(180deg, #0f2444 0%, #1a3a5c 100%); border-right: none; }
+    [data-testid="stSidebar"] * { color: #e2edf7 !important; }
     [data-testid="stSidebarNav"] a { color: #a8c4e0 !important; }
     [data-testid="stSidebarNav"] a:hover { color: #fff !important; }
+    [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] { background: rgba(255,255,255,0.08) !important; border-color: rgba(255,255,255,0.2) !important; }
+    [data-testid="stSidebar"] button { background: rgba(255,255,255,0.12) !important; border-color: rgba(255,255,255,0.25) !important; color: #fff !important; }
     header[data-testid="stHeader"] { background: transparent; }
 
     .page-header {
@@ -76,7 +79,7 @@ st.markdown("""
 </style>
 
 <div class="page-header">
-    <h1>🛡️ GuardRail Monitor</h1>
+    <h1>GuardRail Monitor</h1>
     <p>Agent trust scores, hallucination flags, and confidence bands from the meta-agent.</p>
 </div>
 """, unsafe_allow_html=True)
@@ -100,7 +103,7 @@ if not report:
 # ── Trust scores ──────────────────────────────────────────────────────────────
 st.markdown("### Agent Trust Scores")
 trust = report.get("trust_scores", {})
-agents = [("bear", "🐻 Bear"), ("bull", "🐂 Bull"), ("geopolitical", "🌍 Geo"), ("judge", "⚖️ Judge")]
+agents = [("bear", "Bear"), ("bull", "Bull"), ("geopolitical", "Geopolitical"), ("judge", "Judge")]
 cols = st.columns(4)
 
 for col, (key, display) in zip(cols, agents):
@@ -151,7 +154,7 @@ if flagged:
     for flag in flagged:
         st.markdown(f"""
         <div class="flag-card">
-            <div class="flag-agent">⚠️ {flag.get('agent', '?').upper()}</div>
+            <div class="flag-agent">{flag.get('agent', '?').upper()}</div>
             <div class="flag-claim">"{flag.get('claim', '—')}"</div>
             <div class="flag-issue">↳ {flag.get('issue', '—')}</div>
         </div>
@@ -161,4 +164,4 @@ else:
 
 notes = report.get("guardrail_notes", "")
 if notes:
-    st.markdown(f'<div class="notes-box"><strong style="color:#58a6ff;">📋 Guardrail Notes</strong><br><br>{notes}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="notes-box"><strong>Guardrail Notes</strong><br><br>{notes}</div>', unsafe_allow_html=True)

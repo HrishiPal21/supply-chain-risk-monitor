@@ -16,8 +16,11 @@ st.markdown("""
 
     [data-testid="stAppViewContainer"] { background: #f0f4f8; }
     [data-testid="stSidebar"] { background: linear-gradient(180deg, #0f2444 0%, #1a3a5c 100%); border-right: none; }
+    [data-testid="stSidebar"] * { color: #e2edf7 !important; }
     [data-testid="stSidebarNav"] a { color: #a8c4e0 !important; }
     [data-testid="stSidebarNav"] a:hover { color: #fff !important; }
+    [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] { background: rgba(255,255,255,0.08) !important; border-color: rgba(255,255,255,0.2) !important; }
+    [data-testid="stSidebar"] button { background: rgba(255,255,255,0.12) !important; border-color: rgba(255,255,255,0.25) !important; color: #fff !important; }
     header[data-testid="stHeader"] { background: transparent; }
 
     .page-header h1 { color: #0f2444; font-size: 1.8rem; font-weight: 800; margin-bottom: 0.2rem; padding-top: 1rem; }
@@ -117,7 +120,7 @@ with st.sidebar:
     else:
         st.caption("No past runs yet.")
 
-st.markdown('<div class="page-header"><h1>📊 Analysis Results</h1><p>Judge verdict, analyst debate, and risk breakdown.</p></div>', unsafe_allow_html=True)
+st.markdown('<div class="page-header"><h1>Analysis Results</h1><p>Judge verdict, analyst debate, and risk breakdown.</p></div>', unsafe_allow_html=True)
 
 if not result:
     st.info("Run a query on the **Search** page, or load a past run from the sidebar.")
@@ -155,139 +158,149 @@ st.markdown(f"""
     <div class="score-num">{score:.0f}</div>
     <div class="score-meta">
         <div class="score-label">{_e(label)} Risk</div>
-        <div class="score-query">📌 {_e(result.get('query', ''))}</div>
+        <div class="score-query">{_e(result.get('query', ''))}</div>
         <div style="margin-top:0.3rem; color:#64748b; font-size:0.85rem;">{meta}</div>
-        <span class="action-badge {action_class}">⚡ {_e(action)}</span>
+        <span class="action-badge {action_class}">{_e(action)}</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 st.progress(score / 100)
 
-# ── Exposure card ─────────────────────────────────────────────────────────────
-exposure_level = result.get("exposure_level")
-if exposure_level:
-    profile = result.get("exposure_profile") or {}
-    raw_score_val = result.get("raw_risk_score")
-    multiplier = result.get("exposure_multiplier", 1.0)
+# ── Main tabs ─────────────────────────────────────────────────────────────────
+tab_overview, tab_exposure, tab_analysts, tab_sources = st.tabs(
+    ["Overview", "Exposure", "Analyst Reports", "Sources"]
+)
 
-    exp_color = {
-        "Critical": "#f85149", "High": "#f0883e",
-        "Moderate": "#d29922", "Low": "#3fb950",
-        "Minimal": "#8b949e",  "Unknown": "#8b949e",
-    }.get(exposure_level, "#8b949e")
+# ── OVERVIEW ──────────────────────────────────────────────────────────────────
+with tab_overview:
+    left, right = st.columns([3, 2])
 
-    deps = "".join(f"<li>{_e(d)}</li>" for d in profile.get("key_dependencies", []))
-    mits = "".join(f"<li>{_e(m)}</li>" for m in profile.get("mitigation_on_file", []))
-    score_line = (
-        f"<br><span style='color:#64748b;font-size:0.82rem;'>"
-        f"Macro risk score: <strong>{raw_score_val:.0f}</strong> × "
-        f"exposure {multiplier:.2f} = "
-        f"<strong style='color:{exp_color};'>{score:.0f}</strong></span>"
-        if raw_score_val is not None else ""
-    )
+    with left:
+        st.markdown(
+            f'<div class="verdict-box"><strong style="color:#1a5276;">Judge Verdict</strong>'
+            f'<br><br>{_e(result.get("judge_verdict", "—"))}</div>',
+            unsafe_allow_html=True,
+        )
+        cons = "".join(f"<li>{_e(c)}</li>" for c in final.get("consensus_points", []))
+        dis  = "".join(f"<li>{_e(d)}</li>" for d in final.get("key_disagreements", []))
+        st.markdown(f'<div class="card"><h4>Consensus</h4><ul>{cons or "<li>—</li>"}</ul><h4 style="margin-top:1rem;">Disagreements</h4><ul>{dis or "<li>—</li>"}</ul></div>', unsafe_allow_html=True)
 
-    no_company_note = _e(profile.get("no_company_note", ""))
-    summary_text = _e(result.get("exposure_summary") or profile.get("exposure_reasoning", "—"))
-    exp_type = _e(profile.get("exposure_type", "unknown"))
+    with right:
+        risks = "".join(f"<li>{_e(r)}</li>" for r in final.get("top_3_risks", []))
+        st.markdown(f'<div class="card"><h4>Top Risks</h4><ul>{risks or "<li>—</li>"}</ul></div>', unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        mit = "".join(f"<li>{_e(m)}</li>" for m in final.get("top_3_mitigants", []))
+        st.markdown(f'<div class="card"><h4>Top Mitigants</h4><ul>{mit or "<li>—</li>"}</ul></div>', unsafe_allow_html=True)
 
-    st.markdown(f"""
-    <div style="background:#ffffff;border:1px solid {exp_color}55;border-left:4px solid {exp_color};
-                border-radius:12px;padding:1.2rem 1.4rem;margin-bottom:1.2rem;
-                box-shadow:0 1px 4px rgba(0,0,0,0.06);">
-        <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-            <div>
-                <span style="color:#64748b;font-size:0.75rem;text-transform:uppercase;letter-spacing:.07em;font-weight:600;">
-                    🎯 Company Exposure
-                </span>
-                <div style="color:{exp_color};font-size:1.4rem;font-weight:700;line-height:1.2;margin-top:0.2rem;">
-                    {_e(exposure_level)}
-                    <span style="color:#64748b;font-size:0.85rem;font-weight:400;">
-                        &nbsp;({exp_type})
-                    </span>
-                </div>
-                {score_line}
+# ── EXPOSURE ──────────────────────────────────────────────────────────────────
+with tab_exposure:
+    exposure_level = result.get("exposure_level")
+    if not exposure_level:
+        st.info("No exposure data for this run.")
+    else:
+        profile = result.get("exposure_profile") or {}
+        raw_score_val = result.get("raw_risk_score")
+        multiplier = result.get("exposure_multiplier", 1.0)
+
+        exp_color = {
+            "Critical": "#f85149", "High": "#f0883e",
+            "Moderate": "#d29922", "Low": "#3fb950",
+            "Minimal": "#8b949e",  "Unknown": "#8b949e",
+        }.get(exposure_level, "#8b949e")
+
+        deps = "".join(f"<li>{_e(d)}</li>" for d in profile.get("key_dependencies", []))
+        mits = "".join(f"<li>{_e(m)}</li>" for m in profile.get("mitigation_on_file", []))
+        score_line = (
+            f"<br><span style='color:#64748b;font-size:0.82rem;'>"
+            f"Macro risk score: <strong>{raw_score_val:.0f}</strong> × "
+            f"exposure {multiplier:.2f} = "
+            f"<strong style='color:{exp_color};'>{score:.0f}</strong></span>"
+            if raw_score_val is not None else ""
+        )
+
+        no_company_note = _e(profile.get("no_company_note", ""))
+        summary_text = _e(result.get("exposure_summary") or profile.get("exposure_reasoning", "—"))
+        exp_type = _e(profile.get("exposure_type", "unknown"))
+
+        if deps or mits:
+            dep_block = (
+                "<div>"
+                "<div style='color:#64748b;font-size:0.75rem;text-transform:uppercase;"
+                "letter-spacing:.06em;margin-bottom:.3rem;font-weight:600;'>Key Dependencies</div>"
+                "<ul style='color:#374151;font-size:0.85rem;margin:0;padding-left:1.2rem;line-height:1.8;'>"
+                + deps + "</ul></div>"
+            ) if deps else ""
+            mit_block = (
+                "<div>"
+                "<div style='color:#64748b;font-size:0.75rem;text-transform:uppercase;"
+                "letter-spacing:.06em;margin-bottom:.3rem;font-weight:600;'>Mitigations on File</div>"
+                "<ul style='color:#374151;font-size:0.85rem;margin:0;padding-left:1.2rem;line-height:1.8;'>"
+                + mits + "</ul></div>"
+            ) if mits else ""
+            deps_mits_html = (
+                "<div style='display:flex;gap:2rem;margin-top:0.8rem;flex-wrap:wrap;'>"
+                + dep_block + mit_block + "</div>"
+            )
+        else:
+            deps_mits_html = ""
+
+        note_html = (
+            "<p style='color:#64748b;font-size:0.85rem;font-style:italic;margin-top:0.5rem;'>"
+            + no_company_note + "</p>"
+        ) if no_company_note else ""
+
+        st.markdown(f"""
+        <div style="background:#ffffff;border:1px solid {exp_color}55;border-left:4px solid {exp_color};
+                    border-radius:12px;padding:1.2rem 1.4rem;margin-bottom:1.2rem;
+                    box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+            <span style="color:#64748b;font-size:0.75rem;text-transform:uppercase;letter-spacing:.07em;font-weight:600;">
+                Company Exposure
+            </span>
+            <div style="color:{exp_color};font-size:1.4rem;font-weight:700;line-height:1.2;margin-top:0.2rem;">
+                {_e(exposure_level)}
+                <span style="color:#64748b;font-size:0.85rem;font-weight:400;">&nbsp;({exp_type})</span>
             </div>
+            {score_line}
+            <p style="color:#374151;font-size:0.9rem;margin:0.8rem 0 0 0;line-height:1.6;">{summary_text}</p>
+            {note_html}
+            {deps_mits_html}
         </div>
-        <p style="color:#374151;font-size:0.9rem;margin:0.8rem 0 0 0;line-height:1.6;">
-            {summary_text}
-        </p>
-        {f"<p style='color:#64748b;font-size:0.85rem;font-style:italic;margin-top:0.5rem;'>{no_company_note}</p>" if no_company_note else ""}
-        <div style="display:flex;gap:2rem;margin-top:0.8rem;flex-wrap:wrap;">
-            {"<div><div style='color:#64748b;font-size:0.75rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem;font-weight:600;'>Key Dependencies</div><ul style='color:#374151;font-size:0.85rem;margin:0;padding-left:1.2rem;line-height:1.8;'>" + deps + "</ul></div>" if deps else ""}
-            {"<div><div style='color:#64748b;font-size:0.75rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem;font-weight:600;'>Mitigations on File</div><ul style='color:#374151;font-size:0.85rem;margin:0;padding-left:1.2rem;line-height:1.8;'>" + mits + "</ul></div>" if mits else ""}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-# ── Verdict ───────────────────────────────────────────────────────────────────
-st.markdown(
-    f'<div class="verdict-box"><strong style="color:#1a5276;">⚖️ Judge Verdict</strong>'
-    f'<br><br>{_e(result.get("judge_verdict", "—"))}</div>',
-    unsafe_allow_html=True,
-)
+# ── ANALYST REPORTS ───────────────────────────────────────────────────────────
+with tab_analysts:
+    st.caption("Each analyst approaches the same risk from a different lens. The Judge synthesises their debate into the verdict above.")
+    sub_bear, sub_bull, sub_geo = st.tabs(["Bear", "Bull", "Geopolitical"])
+    with sub_bear:
+        st.markdown(result.get("bear_analysis") or "_No output_")
+    with sub_bull:
+        st.markdown(result.get("bull_analysis") or "_No output_")
+    with sub_geo:
+        st.markdown(result.get("geopolitical_analysis") or "_No output_")
 
-# ── Risks / Mitigants / Consensus ─────────────────────────────────────────────
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    risks = "".join(f"<li>{_e(r)}</li>" for r in final.get("top_3_risks", []))
-    st.markdown(f'<div class="card"><h4>🔴 Top Risks</h4><ul>{risks or "<li>—</li>"}</ul></div>', unsafe_allow_html=True)
-
-with col2:
-    mit = "".join(f"<li>{_e(m)}</li>" for m in final.get("top_3_mitigants", []))
-    st.markdown(f'<div class="card"><h4>🟢 Top Mitigants</h4><ul>{mit or "<li>—</li>"}</ul></div>', unsafe_allow_html=True)
-
-with col3:
-    cons = "".join(f"<li>{_e(c)}</li>" for c in final.get("consensus_points", []))
-    dis  = "".join(f"<li>{_e(d)}</li>" for d in final.get("key_disagreements", []))
-    st.markdown(f'<div class="card"><h4>🤝 Consensus</h4><ul>{cons or "<li>—</li>"}</ul><h4 style="margin-top:1rem;">⚡ Disagreements</h4><ul>{dis or "<li>—</li>"}</ul></div>', unsafe_allow_html=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# ── Analyst debate + Sources ──────────────────────────────────────────────────
-st.markdown("### Analyst Debate & Sources")
-tab_bear, tab_bull, tab_geo, tab_sources = st.tabs(
-    ["🐻 Bear Analyst", "🐂 Bull Analyst", "🌍 Geopolitical", "📄 Sources"]
-)
-
-with tab_bear:
-    st.markdown(result.get("bear_analysis") or "_No output_")
-with tab_bull:
-    st.markdown(result.get("bull_analysis") or "_No output_")
-with tab_geo:
-    st.markdown(result.get("geopolitical_analysis") or "_No output_")
-
+# ── SOURCES ───────────────────────────────────────────────────────────────────
 with tab_sources:
+    from collections import defaultdict
     docs = result.get("retrieved_docs") or []
     if not docs:
         st.info("No source documents recorded for this run.")
     else:
-        # Group by source type
-        from collections import defaultdict
+        SOURCE_ICONS = {
+            "HTML": "Web", "RSS": "RSS",
+            "NewsAPI": "News", "EDGAR": "EDGAR", "Pinecone": "Vector",
+        }
         grouped: dict[str, list[dict]] = defaultdict(list)
         for d in docs:
             prefix = d.get("source", "Unknown").split("/")[0]
             grouped[prefix].append(d)
 
-        SOURCE_ICONS = {
-            "HTML":     "🌐",
-            "RSS":      "📡",
-            "NewsAPI":  "📰",
-            "EDGAR":    "🏛️",
-            "Pinecone": "🔍",
-        }
-
-        col_a, col_b, col_c = st.columns(3)
-        for col, (src_type, src_docs) in zip(
-            [col_a, col_b, col_c] * 10, grouped.items()
-        ):
-            icon = SOURCE_ICONS.get(src_type, "📄")
-            col.metric(f"{icon} {src_type}", f"{len(src_docs)} docs")
+        cols = st.columns(len(grouped) or 1)
+        for col, (src_type, src_docs) in zip(cols, grouped.items()):
+            icon = SOURCE_ICONS.get(src_type, "")
+            col.metric(f"{icon} {src_type}".strip(), f"{len(src_docs)} docs")
 
         st.markdown("<br>", unsafe_allow_html=True)
-
-        # Expandable list per doc
         for i, doc in enumerate(docs, 1):
             src = doc.get("source", "Unknown")
             url = doc.get("url", "")
