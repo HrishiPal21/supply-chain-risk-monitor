@@ -1,23 +1,28 @@
 from __future__ import annotations
 
 import time
+from datetime import datetime, timedelta
 import requests
 from typing import Optional
 from config import NEWS_API_KEY
 
 _BASE_URL = "https://newsapi.org/v2/everything"
 _DELAYS = [2, 4, 8]
+_NEWS_LOOKBACK_DAYS = 30
 
 
 def fetch_news(query: str, page_size: int = 20) -> list[dict]:
     if not NEWS_API_KEY:
         return []
 
+    from_date = (datetime.utcnow() - timedelta(days=_NEWS_LOOKBACK_DAYS)).strftime("%Y-%m-%d")
+
     params = {
         "q": query,
         "sortBy": "publishedAt",
         "language": "en",
         "pageSize": page_size,
+        "from": from_date,
         "apiKey": NEWS_API_KEY,
     }
 
