@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import json
 import os
 from datetime import datetime
+from typing import Optional
 import psycopg2
 import psycopg2.extras
 from psycopg2.extras import Json
@@ -36,15 +39,30 @@ def _conn() -> psycopg2.extensions.connection:
 _SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "..", "db", "schema.sql")
 
 
+import logging as _logging
+_db_logger = _logging.getLogger(__name__)
+
+
+def _db_available() -> bool:
+    try:
+        _conn().close()
+        return True
+    except Exception:
+        return False
+
+
 def init_db() -> None:
-    with open(_SCHEMA_PATH) as f:
-        ddl = f.read()
-    with _conn() as con:
-        with con.cursor() as cur:
-            cur.execute(ddl)
+    try:
+        with open(_SCHEMA_PATH) as f:
+            ddl = f.read()
+        with _conn() as con:
+            with con.cursor() as cur:
+                cur.execute(ddl)
+    except Exception as exc:
+        _db_logger.warning("DB unavailable — persistence disabled: %s", exc)
 
 
-def save_run(state: dict) -> int:
+def save_run(state: dict) -> Optional[int]:
     sql = """
         INSERT INTO runs (
             query, company, region, risk_score, risk_label,
@@ -74,22 +92,32 @@ def save_run(state: dict) -> int:
         "failed_sources": state.get("failed_sources") or [],
         "created_at": datetime.utcnow().isoformat(),
     }
-    with _conn() as con:
-        with con.cursor() as cur:
-            cur.execute(sql, params)
-            return cur.fetchone()[0]
+    try:
+        with _conn() as con:
+            with con.cursor() as cur:
+                cur.execute(sql, params)
+                return cur.fetchone()[0]
+    except Exception as exc:
+        _db_logger.warning("Could not save run to DB: %s", exc)
+        return None
 
 
 def get_recent_runs(limit: int = 20) -> list[dict]:
-    with _conn() as con:
-        with con.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute("SELECT * FROM runs ORDER BY created_at DESC LIMIT %s", (limit,))
-            return [dict(r) for r in cur.fetchall()]
+    try:
+        with _conn() as con:
+            with con.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute("SELECT * FROM runs ORDER BY created_at DESC LIMIT %s", (limit,))
+                return [dict(r) for r in cur.fetchall()]
+    except Exception:
+        return []
 
 
-def get_run_by_id(run_id: int) -> dict | None:
-    with _conn() as con:
-        with con.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute("SELECT * FROM runs WHERE id = %s", (run_id,))
-            row = cur.fetchone()
-    return dict(row) if row else None
+def get_run_by_id(run_id: int) -> Optional[dict]:
+    try:
+        with _conn() as con:
+            with con.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+                cur.execute("SELECT * FROM runs WHERE id = %s", (run_id,))
+                row = cur.fetchone()
+        return dict(row) if row else None
+    except Exception:
+        return None

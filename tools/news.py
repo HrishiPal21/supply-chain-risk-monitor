@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import time
 import requests
+from typing import Optional
 from config import NEWS_API_KEY
 
 _BASE_URL = "https://newsapi.org/v2/everything"
@@ -18,7 +21,7 @@ def fetch_news(query: str, page_size: int = 20) -> list[dict]:
         "apiKey": NEWS_API_KEY,
     }
 
-    last_exc: Exception | None = None
+    last_exc: Optional[Exception] = None
     for attempt, delay in enumerate(_DELAYS, 1):
         try:
             resp = requests.get(_BASE_URL, params=params, timeout=10)

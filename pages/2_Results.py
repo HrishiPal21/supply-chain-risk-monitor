@@ -1,96 +1,91 @@
 import json
+import html as _html
 import streamlit as st
 from tools.postgres_db import get_recent_runs, get_run_by_id
+
+def _e(text: str) -> str:
+    """HTML-escape dynamic LLM text before injecting into markup."""
+    return _html.escape(str(text or ""))
 
 st.set_page_config(page_title="Results · Supply Chain Risk", layout="wide", page_icon="📊")
 
 st.markdown("""
 <style>
-    [data-testid="stAppViewContainer"] { background: #0f1117; }
-    [data-testid="stSidebar"] { background: #161b22; border-right: 1px solid #30363d; }
-    .page-header h1 { color: #e6edf3; font-size: 2rem; font-weight: 700; margin-bottom: 0.2rem; padding-top: 1.5rem; }
-    .page-header p { color: #8b949e; margin: 0 0 1.5rem 0; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+
+    [data-testid="stAppViewContainer"] { background: #f0f4f8; }
+    [data-testid="stSidebar"] { background: linear-gradient(180deg, #0f2444 0%, #1a3a5c 100%); border-right: none; }
+    [data-testid="stSidebarNav"] a { color: #a8c4e0 !important; }
+    [data-testid="stSidebarNav"] a:hover { color: #fff !important; }
+    header[data-testid="stHeader"] { background: transparent; }
+
+    .page-header h1 { color: #0f2444; font-size: 1.8rem; font-weight: 800; margin-bottom: 0.2rem; padding-top: 1rem; }
+    .page-header p  { color: #64748b; margin: 0 0 1.2rem 0; }
 
     /* Score banner */
     .score-banner {
-        border-radius: 12px;
-        padding: 1.8rem 2rem;
-        margin-bottom: 1.5rem;
-        display: flex;
-        align-items: center;
-        gap: 2rem;
-        flex-wrap: wrap;
+        border-radius: 14px; padding: 1.8rem 2rem;
+        margin-bottom: 1.2rem; display: flex;
+        align-items: center; gap: 2rem; flex-wrap: wrap;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
-    .score-banner .score-num {
-        font-size: 4rem;
-        font-weight: 800;
-        line-height: 1;
-    }
+    .score-banner .score-num  { font-size: 4.5rem; font-weight: 800; line-height: 1; }
     .score-banner .score-meta { flex: 1; }
-    .score-banner .score-label {
-        font-size: 1.4rem;
-        font-weight: 600;
-        margin-bottom: 0.3rem;
-    }
-    .score-banner .score-query { color: #8b949e; font-size: 0.9rem; }
+    .score-banner .score-label { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.3rem; }
+    .score-banner .score-query { font-size: 0.88rem; opacity: 0.75; }
 
-    /* Risk level colors */
-    .risk-low    { background: #0d2818; border: 1px solid #2ea04326; }
-    .risk-mod    { background: #271d06; border: 1px solid #d2992026; }
-    .risk-high   { background: #2d1a06; border: 1px solid #f0883e26; }
-    .risk-crit   { background: #2d0f0f; border: 1px solid #f8514926; }
+    /* Risk colours — light theme */
+    .risk-low  { background: #f0faf4; border: 1.5px solid #86efac; }
+    .risk-mod  { background: #fffbeb; border: 1.5px solid #fcd34d; }
+    .risk-high { background: #fff7ed; border: 1.5px solid #fdba74; }
+    .risk-crit { background: #fef2f2; border: 1.5px solid #fca5a5; }
 
-    .risk-low .score-num    { color: #3fb950; }
-    .risk-mod .score-num    { color: #d29922; }
-    .risk-high .score-num   { color: #f0883e; }
-    .risk-crit .score-num   { color: #f85149; }
-
-    .risk-low .score-label  { color: #3fb950; }
-    .risk-mod .score-label  { color: #d29922; }
-    .risk-high .score-label { color: #f0883e; }
-    .risk-crit .score-label { color: #f85149; }
+    .risk-low  .score-num, .risk-low  .score-label { color: #16a34a; }
+    .risk-mod  .score-num, .risk-mod  .score-label { color: #b45309; }
+    .risk-high .score-num, .risk-high .score-label { color: #c2410c; }
+    .risk-crit .score-num, .risk-crit .score-label { color: #dc2626; }
 
     /* Action badge */
     .action-badge {
-        display: inline-block;
-        padding: 0.35rem 1rem;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        margin-top: 0.5rem;
+        display: inline-block; padding: 0.3rem 1rem;
+        border-radius: 20px; font-size: 0.82rem; font-weight: 600; margin-top: 0.5rem;
     }
-    .action-watch    { background: #0d2818; color: #3fb950; border: 1px solid #3fb95044; }
-    .action-monitor  { background: #271d06; color: #d29922; border: 1px solid #d2992244; }
-    .action-escalate { background: #2d1a06; color: #f0883e; border: 1px solid #f0883e44; }
-    .action-immediate{ background: #2d0f0f; color: #f85149; border: 1px solid #f8514944; }
+    .action-watch     { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+    .action-monitor   { background: #fef9c3; color: #854d0e; border: 1px solid #fcd34d; }
+    .action-escalate  { background: #ffedd5; color: #c2410c; border: 1px solid #fdba74; }
+    .action-immediate { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
 
     /* Cards */
     .card {
-        background: #161b22;
-        border: 1px solid #30363d;
-        border-radius: 10px;
-        padding: 1.2rem;
-        height: 100%;
+        background: #ffffff; border: 1px solid #e2e8f0;
+        border-radius: 12px; padding: 1.2rem; height: 100%;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
     }
-    .card h4 { color: #58a6ff; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 0.8rem 0; }
-    .card ul { margin: 0; padding-left: 1.2rem; color: #c9d1d9; font-size: 0.9rem; line-height: 1.8; }
+    .card h4 {
+        color: #1a3a5c; font-size: 0.8rem; text-transform: uppercase;
+        letter-spacing: 0.06em; margin: 0 0 0.8rem 0; font-weight: 700;
+    }
+    .card ul { margin: 0; padding-left: 1.2rem; color: #374151; font-size: 0.88rem; line-height: 1.9; }
 
     /* Verdict box */
     .verdict-box {
-        background: #161b22;
-        border: 1px solid #30363d;
-        border-left: 4px solid #58a6ff;
-        border-radius: 8px;
-        padding: 1.2rem 1.4rem;
-        color: #c9d1d9;
-        font-size: 0.95rem;
-        line-height: 1.7;
-        margin-bottom: 1.5rem;
+        background: #ffffff; border: 1px solid #e2e8f0;
+        border-left: 4px solid #1a5276; border-radius: 8px;
+        padding: 1.2rem 1.4rem; color: #374151;
+        font-size: 0.93rem; line-height: 1.75; margin-bottom: 1.2rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
     }
 
     /* Tabs */
-    [data-testid="stTabs"] button { color: #8b949e !important; }
-    [data-testid="stTabs"] button[aria-selected="true"] { color: #e6edf3 !important; border-bottom-color: #58a6ff !important; }
+    [data-testid="stTabs"] button { color: #64748b !important; font-weight: 500; }
+    [data-testid="stTabs"] button[aria-selected="true"] {
+        color: #0f2444 !important; border-bottom-color: #1a5276 !important; font-weight: 700;
+    }
+
+    /* Expanders */
+    details { background: #fff; border: 1px solid #e2e8f0 !important; border-radius: 8px !important; }
+    summary { color: #0f2444 !important; font-weight: 500; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -151,48 +146,110 @@ action_class = {
 
 meta = ""
 if result.get("company"):
-    meta += f"<strong>Company:</strong> {result['company']}&nbsp;&nbsp;"
+    meta += f"<strong>Company:</strong> {_e(result['company'])}&nbsp;&nbsp;"
 if result.get("region"):
-    meta += f"<strong>Region:</strong> {result['region']}&nbsp;&nbsp;"
+    meta += f"<strong>Region:</strong> {_e(result['region'])}&nbsp;&nbsp;"
 
 st.markdown(f"""
 <div class="score-banner {risk_class}">
     <div class="score-num">{score:.0f}</div>
     <div class="score-meta">
-        <div class="score-label">{label} Risk</div>
-        <div class="score-query">📌 {result.get('query', '')}</div>
-        <div style="margin-top:0.3rem; color:#8b949e; font-size:0.85rem;">{meta}</div>
-        <span class="action-badge {action_class}">⚡ {action}</span>
+        <div class="score-label">{_e(label)} Risk</div>
+        <div class="score-query">📌 {_e(result.get('query', ''))}</div>
+        <div style="margin-top:0.3rem; color:#64748b; font-size:0.85rem;">{meta}</div>
+        <span class="action-badge {action_class}">⚡ {_e(action)}</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 st.progress(score / 100)
 
+# ── Exposure card ─────────────────────────────────────────────────────────────
+exposure_level = result.get("exposure_level")
+if exposure_level:
+    profile = result.get("exposure_profile") or {}
+    raw_score_val = result.get("raw_risk_score")
+    multiplier = result.get("exposure_multiplier", 1.0)
+
+    exp_color = {
+        "Critical": "#f85149", "High": "#f0883e",
+        "Moderate": "#d29922", "Low": "#3fb950",
+        "Minimal": "#8b949e",  "Unknown": "#8b949e",
+    }.get(exposure_level, "#8b949e")
+
+    deps = "".join(f"<li>{_e(d)}</li>" for d in profile.get("key_dependencies", []))
+    mits = "".join(f"<li>{_e(m)}</li>" for m in profile.get("mitigation_on_file", []))
+    score_line = (
+        f"<br><span style='color:#64748b;font-size:0.82rem;'>"
+        f"Macro risk score: <strong>{raw_score_val:.0f}</strong> × "
+        f"exposure {multiplier:.2f} = "
+        f"<strong style='color:{exp_color};'>{score:.0f}</strong></span>"
+        if raw_score_val is not None else ""
+    )
+
+    no_company_note = _e(profile.get("no_company_note", ""))
+    summary_text = _e(result.get("exposure_summary") or profile.get("exposure_reasoning", "—"))
+    exp_type = _e(profile.get("exposure_type", "unknown"))
+
+    st.markdown(f"""
+    <div style="background:#ffffff;border:1px solid {exp_color}55;border-left:4px solid {exp_color};
+                border-radius:12px;padding:1.2rem 1.4rem;margin-bottom:1.2rem;
+                box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+        <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+            <div>
+                <span style="color:#64748b;font-size:0.75rem;text-transform:uppercase;letter-spacing:.07em;font-weight:600;">
+                    🎯 Company Exposure
+                </span>
+                <div style="color:{exp_color};font-size:1.4rem;font-weight:700;line-height:1.2;margin-top:0.2rem;">
+                    {_e(exposure_level)}
+                    <span style="color:#64748b;font-size:0.85rem;font-weight:400;">
+                        &nbsp;({exp_type})
+                    </span>
+                </div>
+                {score_line}
+            </div>
+        </div>
+        <p style="color:#374151;font-size:0.9rem;margin:0.8rem 0 0 0;line-height:1.6;">
+            {summary_text}
+        </p>
+        {f"<p style='color:#64748b;font-size:0.85rem;font-style:italic;margin-top:0.5rem;'>{no_company_note}</p>" if no_company_note else ""}
+        <div style="display:flex;gap:2rem;margin-top:0.8rem;flex-wrap:wrap;">
+            {"<div><div style='color:#64748b;font-size:0.75rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem;font-weight:600;'>Key Dependencies</div><ul style='color:#374151;font-size:0.85rem;margin:0;padding-left:1.2rem;line-height:1.8;'>" + deps + "</ul></div>" if deps else ""}
+            {"<div><div style='color:#64748b;font-size:0.75rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem;font-weight:600;'>Mitigations on File</div><ul style='color:#374151;font-size:0.85rem;margin:0;padding-left:1.2rem;line-height:1.8;'>" + mits + "</ul></div>" if mits else ""}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
 # ── Verdict ───────────────────────────────────────────────────────────────────
-st.markdown(f'<div class="verdict-box"><strong style="color:#58a6ff;">⚖️ Judge Verdict</strong><br><br>{result.get("judge_verdict", "—")}</div>', unsafe_allow_html=True)
+st.markdown(
+    f'<div class="verdict-box"><strong style="color:#1a5276;">⚖️ Judge Verdict</strong>'
+    f'<br><br>{_e(result.get("judge_verdict", "—"))}</div>',
+    unsafe_allow_html=True,
+)
 
 # ── Risks / Mitigants / Consensus ─────────────────────────────────────────────
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    risks = "".join(f"<li>{r}</li>" for r in final.get("top_3_risks", []))
+    risks = "".join(f"<li>{_e(r)}</li>" for r in final.get("top_3_risks", []))
     st.markdown(f'<div class="card"><h4>🔴 Top Risks</h4><ul>{risks or "<li>—</li>"}</ul></div>', unsafe_allow_html=True)
 
 with col2:
-    mit = "".join(f"<li>{m}</li>" for m in final.get("top_3_mitigants", []))
+    mit = "".join(f"<li>{_e(m)}</li>" for m in final.get("top_3_mitigants", []))
     st.markdown(f'<div class="card"><h4>🟢 Top Mitigants</h4><ul>{mit or "<li>—</li>"}</ul></div>', unsafe_allow_html=True)
 
 with col3:
-    cons = "".join(f"<li>{c}</li>" for c in final.get("consensus_points", []))
-    dis = "".join(f"<li>{d}</li>" for d in final.get("key_disagreements", []))
+    cons = "".join(f"<li>{_e(c)}</li>" for c in final.get("consensus_points", []))
+    dis  = "".join(f"<li>{_e(d)}</li>" for d in final.get("key_disagreements", []))
     st.markdown(f'<div class="card"><h4>🤝 Consensus</h4><ul>{cons or "<li>—</li>"}</ul><h4 style="margin-top:1rem;">⚡ Disagreements</h4><ul>{dis or "<li>—</li>"}</ul></div>', unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── Analyst debate ────────────────────────────────────────────────────────────
-st.markdown("### Analyst Debate")
-tab_bear, tab_bull, tab_geo = st.tabs(["🐻 Bear Analyst", "🐂 Bull Analyst", "🌍 Geopolitical"])
+# ── Analyst debate + Sources ──────────────────────────────────────────────────
+st.markdown("### Analyst Debate & Sources")
+tab_bear, tab_bull, tab_geo, tab_sources = st.tabs(
+    ["🐻 Bear Analyst", "🐂 Bull Analyst", "🌍 Geopolitical", "📄 Sources"]
+)
 
 with tab_bear:
     st.markdown(result.get("bear_analysis") or "_No output_")
@@ -200,3 +257,41 @@ with tab_bull:
     st.markdown(result.get("bull_analysis") or "_No output_")
 with tab_geo:
     st.markdown(result.get("geopolitical_analysis") or "_No output_")
+
+with tab_sources:
+    docs = result.get("retrieved_docs") or []
+    if not docs:
+        st.info("No source documents recorded for this run.")
+    else:
+        # Group by source type
+        from collections import defaultdict
+        grouped: dict[str, list[dict]] = defaultdict(list)
+        for d in docs:
+            prefix = d.get("source", "Unknown").split("/")[0]
+            grouped[prefix].append(d)
+
+        SOURCE_ICONS = {
+            "HTML":     "🌐",
+            "RSS":      "📡",
+            "NewsAPI":  "📰",
+            "EDGAR":    "🏛️",
+            "Pinecone": "🔍",
+        }
+
+        col_a, col_b, col_c = st.columns(3)
+        for col, (src_type, src_docs) in zip(
+            [col_a, col_b, col_c] * 10, grouped.items()
+        ):
+            icon = SOURCE_ICONS.get(src_type, "📄")
+            col.metric(f"{icon} {src_type}", f"{len(src_docs)} docs")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Expandable list per doc
+        for i, doc in enumerate(docs, 1):
+            src = doc.get("source", "Unknown")
+            url = doc.get("url", "")
+            snippet = (doc.get("text") or "")[:300].replace("\n", " ")
+            label = f"**{i}. {src}**" + (f"  —  [{url[:60]}]({url})" if url else "")
+            with st.expander(label, expanded=False):
+                st.caption(snippet + ("…" if len(doc.get("text", "")) > 300 else ""))

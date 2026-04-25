@@ -34,9 +34,12 @@ def geopolitical_analyst(state: AgentState) -> AgentState:
                 "content": (
                     f"Query: {state['query']}\n"
                     f"Company: {state.get('company') or 'N/A'}\n"
-                    f"Region: {state.get('region') or 'N/A'}\n\n"
+                    f"Region: {state.get('region') or 'N/A'}\n"
+                    f"Exposure Level: {state.get('exposure_level') or 'Unknown'}\n"
+                    f"Exposure Context: {state.get('exposure_summary') or 'Not assessed'}\n\n"
                     f"Source Documents:\n{context}\n\n"
-                    "Provide a geopolitical risk analysis of this supply chain."
+                    "Provide a geopolitical risk analysis of this supply chain. "
+                    "Consider how the company's exposure level affects their specific vulnerability."
                 ),
             },
         ],
@@ -47,5 +50,5 @@ def geopolitical_analyst(state: AgentState) -> AgentState:
 
 def _format_docs(docs: list[dict]) -> str:
     return "\n\n---\n\n".join(
-        f"[{d.get('source', 'unknown')}] {d.get('text', '')}" for d in docs[:15]
+        f"[{d.get('source', 'unknown')}] {d.get('text', '')}" for d in docs[:8]
     )

@@ -5,71 +5,73 @@ st.set_page_config(page_title="GuardRail · Supply Chain Risk", layout="wide", p
 
 st.markdown("""
 <style>
-    [data-testid="stAppViewContainer"] { background: #0f1117; }
-    [data-testid="stSidebar"] { background: #161b22; border-right: 1px solid #30363d; }
-    .page-header { padding-top: 1.5rem; margin-bottom: 1.5rem; }
-    .page-header h1 { color: #e6edf3; font-size: 2rem; font-weight: 700; margin-bottom: 0.2rem; }
-    .page-header p { color: #8b949e; margin: 0; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+
+    [data-testid="stAppViewContainer"] { background: #f0f4f8; }
+    [data-testid="stSidebar"] { background: linear-gradient(180deg, #0f2444 0%, #1a3a5c 100%); border-right: none; }
+    [data-testid="stSidebarNav"] a { color: #a8c4e0 !important; }
+    [data-testid="stSidebarNav"] a:hover { color: #fff !important; }
+    header[data-testid="stHeader"] { background: transparent; }
+
+    .page-header {
+        background: linear-gradient(135deg, #0f2444 0%, #1a5276 100%);
+        border-radius: 12px; padding: 1.8rem 2rem; margin-bottom: 1.5rem;
+    }
+    .page-header h1 { color: #fff; font-size: 1.8rem; font-weight: 800; margin: 0 0 0.2rem 0; }
+    .page-header p  { color: #a8c4e0; margin: 0; font-size: 0.88rem; }
 
     /* Trust card */
     .trust-card {
-        background: #161b22;
-        border: 1px solid #30363d;
-        border-radius: 10px;
-        padding: 1.4rem;
-        text-align: center;
+        background: #ffffff; border: 1px solid #e2e8f0;
+        border-radius: 12px; padding: 1.4rem; text-align: center;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
     }
-    .trust-card .agent-name { color: #8b949e; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.6rem; }
+    .trust-card .agent-name {
+        color: #64748b; font-size: 0.75rem; text-transform: uppercase;
+        letter-spacing: 0.07em; margin-bottom: 0.6rem; font-weight: 600;
+    }
     .trust-card .trust-score { font-size: 2.4rem; font-weight: 800; line-height: 1; }
-    .trust-card .trust-bar { margin-top: 0.6rem; background: #21262d; border-radius: 4px; height: 6px; overflow: hidden; }
+    .trust-card .trust-bar { margin-top: 0.7rem; background: #e2e8f0; border-radius: 4px; height: 7px; overflow: hidden; }
     .trust-card .trust-fill { height: 100%; border-radius: 4px; }
-    .trust-high { color: #3fb950; }
-    .trust-med  { color: #d29922; }
-    .trust-low  { color: #f85149; }
-    .fill-high  { background: #3fb950; }
-    .fill-med   { background: #d29922; }
-    .fill-low   { background: #f85149; }
+    .trust-high { color: #16a34a; }
+    .trust-med  { color: #b45309; }
+    .trust-low  { color: #dc2626; }
+    .fill-high  { background: #16a34a; }
+    .fill-med   { background: #f59e0b; }
+    .fill-low   { background: #dc2626; }
 
     /* Confidence banner */
     .conf-banner {
-        background: #161b22;
-        border: 1px solid #30363d;
-        border-radius: 10px;
-        padding: 1.4rem 1.8rem;
-        display: flex;
-        align-items: center;
-        gap: 3rem;
-        flex-wrap: wrap;
-        margin: 1.5rem 0;
+        background: #ffffff; border: 1px solid #e2e8f0;
+        border-radius: 12px; padding: 1.4rem 2rem;
+        display: flex; align-items: center; gap: 3rem;
+        flex-wrap: wrap; margin: 1.2rem 0;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
     }
     .conf-metric { text-align: center; }
-    .conf-metric .label { color: #8b949e; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; }
-    .conf-metric .value { color: #e6edf3; font-size: 1.8rem; font-weight: 700; }
+    .conf-metric .label {
+        color: #64748b; font-size: 0.75rem; text-transform: uppercase;
+        letter-spacing: 0.06em; font-weight: 600;
+    }
+    .conf-metric .value { color: #0f2444; font-size: 1.8rem; font-weight: 700; }
 
     /* Flag card */
     .flag-card {
-        background: #2d1a06;
-        border: 1px solid #f0883e33;
-        border-left: 4px solid #f0883e;
-        border-radius: 8px;
-        padding: 1rem 1.2rem;
-        margin-bottom: 0.8rem;
+        background: #fff7ed; border: 1px solid #fdba74;
+        border-left: 4px solid #c2410c; border-radius: 8px;
+        padding: 1rem 1.2rem; margin-bottom: 0.8rem;
     }
-    .flag-card .flag-agent { color: #f0883e; font-size: 0.78rem; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; }
-    .flag-card .flag-claim { color: #e6edf3; font-size: 0.9rem; margin: 0.4rem 0; }
-    .flag-card .flag-issue { color: #8b949e; font-size: 0.85rem; }
+    .flag-card .flag-agent { color: #c2410c; font-size: 0.75rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; }
+    .flag-card .flag-claim { color: #1a2744; font-size: 0.9rem; margin: 0.4rem 0; }
+    .flag-card .flag-issue { color: #64748b; font-size: 0.84rem; }
 
     /* Notes box */
     .notes-box {
-        background: #161b22;
-        border: 1px solid #30363d;
-        border-left: 4px solid #58a6ff;
-        border-radius: 8px;
-        padding: 1rem 1.4rem;
-        color: #c9d1d9;
-        font-size: 0.9rem;
-        line-height: 1.7;
-        margin-top: 1.5rem;
+        background: #ffffff; border: 1px solid #e2e8f0;
+        border-left: 4px solid #1a5276; border-radius: 8px;
+        padding: 1rem 1.4rem; color: #374151;
+        font-size: 0.9rem; line-height: 1.75; margin-top: 1.2rem;
     }
 </style>
 
@@ -122,7 +124,7 @@ for col, (key, display) in zip(cols, agents):
 # ── Confidence band ───────────────────────────────────────────────────────────
 band = report.get("confidence_band", {})
 overall = report.get("overall_confidence", "—")
-overall_color = {"High": "#3fb950", "Medium": "#d29922", "Low": "#f85149"}.get(overall, "#8b949e")
+overall_color = {"High": "#16a34a", "Medium": "#b45309", "Low": "#dc2626"}.get(overall, "#64748b")
 
 st.markdown(f"""
 <div class="conf-banner">

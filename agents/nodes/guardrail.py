@@ -1,7 +1,18 @@
 import json
+import logging
 from agents.state import AgentState
 from config import get_openai_client, OPENAI_MODEL
 from tools.retry import chat_with_retry
+
+logger = logging.getLogger(__name__)
+
+_FALLBACK_REPORT = {
+    "trust_scores": {"bear": 0.5, "bull": 0.5, "geopolitical": 0.5, "judge": 0.5},
+    "flagged_claims": [],
+    "confidence_band": {"low": 30, "high": 70},
+    "overall_confidence": "Low",
+    "guardrail_notes": "Guardrail could not complete quality checks (JSON parse error).",
+}
 
 SYSTEM_PROMPT = """You are a Guardrail Meta-Agent responsible for quality control
 of a multi-agent supply chain risk analysis system.
@@ -33,12 +44,18 @@ Output ONLY valid JSON in this exact schema:
 """
 
 
+def _doc_digest(docs: list[dict], max_docs: int = 6) -> str:
+    lines = []
+    for d in docs[:max_docs]:
+        src = d.get("source", "unknown")
+        snippet = (d.get("text") or "")[:120].replace("\n", " ")
+        lines.append(f"[{src}] {snippet}")
+    return "\n".join(lines) if lines else "(no source documents available)"
+
+
 def guardrail(state: AgentState) -> AgentState:
     client = get_openai_client()
-    source_texts = "\n\n".join(
-        f"[{d.get('source', 'unknown')}] {d.get('text', '')}"
-        for d in state["retrieved_docs"][:10]
-    )
+    digest = _doc_digest(state.get("retrieved_docs", []))
 
     response = chat_with_retry(client,
         model=OPENAI_MODEL,
@@ -47,7 +64,7 @@ def guardrail(state: AgentState) -> AgentState:
             {
                 "role": "user",
                 "content": (
-                    f"=== SOURCE DOCUMENTS ===\n{source_texts}\n\n"
+                    f"=== SOURCE DOCUMENT DIGEST (for grounding checks) ===\n{digest}\n\n"
                     f"=== BEAR ANALYST ===\n{state.get('bear_analysis', 'N/A')}\n\n"
                     f"=== BULL ANALYST ===\n{state.get('bull_analysis', 'N/A')}\n\n"
                     f"=== GEOPOLITICAL ANALYST ===\n{state.get('geopolitical_analysis', 'N/A')}\n\n"
@@ -61,6 +78,17 @@ def guardrail(state: AgentState) -> AgentState:
     )
 
     raw = response.choices[0].message.content
-    report = json.loads(raw)
+    try:
+        report = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        logger.error("Guardrail: malformed JSON from model — %s | raw=%r", exc, raw[:200])
+        report = _FALLBACK_REPORT
+
+    logger.info(
+        "Guardrail: confidence=%s trust=%s flagged=%d",
+        report.get("overall_confidence", "?"),
+        report.get("trust_scores", {}),
+        len(report.get("flagged_claims", [])),
+    )
 
     return {**state, "guardrail_report": report}

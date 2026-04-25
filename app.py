@@ -1,7 +1,13 @@
 import logging
+import sys
+import os
+sys.path.insert(0, os.path.dirname(__file__))
 import streamlit as st
 
 logging.basicConfig(level=logging.WARNING, format="%(name)s %(levelname)s: %(message)s")
+# Show INFO from our pipeline modules without drowning in third-party noise
+for _ns in ("agents", "tools"):
+    logging.getLogger(_ns).setLevel(logging.INFO)
 
 st.set_page_config(
     page_title="Supply Chain Risk Monitor",
@@ -12,79 +18,81 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    /* Global */
-    [data-testid="stAppViewContainer"] { background: #0f1117; }
-    [data-testid="stSidebar"] { background: #161b22; border-right: 1px solid #30363d; }
-    [data-testid="stSidebarNav"] a { color: #c9d1d9 !important; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-    /* Hide default header */
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+
+    [data-testid="stAppViewContainer"] { background: #f0f4f8; }
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0f2444 0%, #1a3a5c 100%);
+        border-right: none;
+    }
+    [data-testid="stSidebarNav"] a { color: #a8c4e0 !important; font-size: 0.9rem; }
+    [data-testid="stSidebarNav"] a:hover { color: #ffffff !important; }
     header[data-testid="stHeader"] { background: transparent; }
 
-    /* Hero */
-    .hero { padding: 3rem 0 2rem 0; text-align: center; }
-    .hero h1 {
-        font-size: 2.8rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, #58a6ff 0%, #f78166 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 0.5rem;
+    .hero {
+        background: linear-gradient(135deg, #0f2444 0%, #1a5276 100%);
+        border-radius: 16px;
+        padding: 3rem 2.5rem;
+        margin: 1rem 0 2rem 0;
+        text-align: center;
     }
-    .hero p { color: #8b949e; font-size: 1.1rem; margin-top: 0; }
+    .hero h1 { color: #ffffff; font-size: 2.6rem; font-weight: 800; margin-bottom: 0.5rem; letter-spacing: -0.5px; }
+    .hero p { color: #a8c4e0; font-size: 1.05rem; margin: 0; }
 
-    /* Feature cards */
-    .card-grid { display: flex; gap: 1.2rem; margin: 2rem 0; flex-wrap: wrap; }
+    .card-grid { display: flex; gap: 1rem; margin: 1.5rem 0; flex-wrap: wrap; }
     .card {
-        flex: 1;
-        min-width: 200px;
-        background: #161b22;
-        border: 1px solid #30363d;
+        flex: 1; min-width: 180px;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         border-radius: 12px;
         padding: 1.4rem 1.2rem;
-        transition: border-color 0.2s;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        transition: box-shadow 0.2s, transform 0.2s;
     }
-    .card:hover { border-color: #58a6ff; }
+    .card:hover { box-shadow: 0 4px 12px rgba(15,36,68,0.12); transform: translateY(-2px); }
     .card .icon { font-size: 1.8rem; margin-bottom: 0.6rem; }
-    .card h3 { color: #e6edf3; font-size: 1rem; margin: 0 0 0.4rem 0; }
-    .card p { color: #8b949e; font-size: 0.85rem; margin: 0; line-height: 1.5; }
+    .card h3 { color: #0f2444; font-size: 0.95rem; font-weight: 700; margin: 0 0 0.35rem 0; }
+    .card p { color: #64748b; font-size: 0.82rem; margin: 0; line-height: 1.5; }
 
-    /* Badge row */
     .badge-row { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-top: 1.5rem; }
     .badge {
-        background: #21262d;
-        border: 1px solid #30363d;
+        background: #e8f0f9;
+        border: 1px solid #c8daf0;
         border-radius: 20px;
-        padding: 0.25rem 0.8rem;
-        color: #8b949e;
+        padding: 0.25rem 0.9rem;
+        color: #1a3a5c;
         font-size: 0.78rem;
+        font-weight: 500;
     }
 </style>
 
 <div class="hero">
     <h1>⚠️ Supply Chain Risk Monitor</h1>
-    <p>Multi-agent LangGraph pipeline · GPT-4o · Pinecone RAG · GCP</p>
+    <p>Multi-agent LangGraph pipeline · GPT-4o · Pinecone RAG · Real-time data</p>
 </div>
 
 <div class="card-grid">
     <div class="card">
         <div class="icon">🔍</div>
         <h3>Search</h3>
-        <p>Describe a supply chain scenario and run the 6-agent analysis pipeline.</p>
+        <p>Pick a scenario or build a custom query. 7-agent pipeline runs automatically.</p>
+    </div>
+    <div class="card">
+        <div class="icon">🎯</div>
+        <h3>Exposure</h3>
+        <p>Company-specific exposure assessment — how directly are YOU affected?</p>
     </div>
     <div class="card">
         <div class="icon">📊</div>
         <h3>Results</h3>
-        <p>View risk scores, analyst debate, judge verdict, and recommended actions.</p>
+        <p>Risk score, analyst debate, judge verdict, and recommended actions.</p>
     </div>
     <div class="card">
         <div class="icon">🛡️</div>
         <h3>GuardRail</h3>
-        <p>Inspect trust scores, hallucination flags, and confidence bands per agent.</p>
-    </div>
-    <div class="card">
-        <div class="icon">⚙️</div>
-        <h3>Pipeline</h3>
-        <p>Retriever → Bear · Bull · Geo analysts → Judge → Guardrail meta-agent.</p>
+        <p>Trust scores, hallucination flags, and confidence bands per agent.</p>
     </div>
 </div>
 
@@ -94,6 +102,7 @@ st.markdown("""
     <span class="badge">Pinecone RAG</span>
     <span class="badge">SEC EDGAR</span>
     <span class="badge">NewsAPI</span>
+    <span class="badge">BeautifulSoup</span>
     <span class="badge">RSS Feeds</span>
     <span class="badge">PostgreSQL</span>
     <span class="badge">GCP Cloud Run</span>

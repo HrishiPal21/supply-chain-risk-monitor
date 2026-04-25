@@ -4,6 +4,7 @@ from agents.state import AgentState
 
 logger = logging.getLogger(__name__)
 from tools.edgar import fetch_edgar_filings
+from tools.html_scraper import fetch_html_docs
 from tools.news import fetch_news
 from tools.rss_feed import fetch_rss
 from tools.pinecone_client import search_pinecone, upsert_docs
@@ -27,6 +28,12 @@ def data_retriever(state: AgentState) -> AgentState:
         rss_docs = []
         failed_sources.append("RSS")
 
+    try:
+        html_docs = fetch_html_docs(query)
+    except Exception:
+        html_docs = []
+        failed_sources.append("HTML Scraper")
+
     if company:
         try:
             edgar_docs = fetch_edgar_filings(company)
@@ -36,7 +43,7 @@ def data_retriever(state: AgentState) -> AgentState:
     else:
         edgar_docs = []
 
-    raw_docs = news_docs + rss_docs + edgar_docs
+    raw_docs = news_docs + rss_docs + html_docs + edgar_docs
     for doc in raw_docs:
         doc.setdefault("id", uuid.uuid4().hex)
 

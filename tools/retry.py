@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import time
 import logging
+from typing import Optional
 from openai import RateLimitError, APIStatusError
 
 logger = logging.getLogger(__name__)
@@ -24,7 +27,7 @@ def chat_with_retry(client, **kwargs):
             time.sleep(delay)
 
 
-def embed_with_retry(client, model: str, input: str, dimensions: int | None = None) -> list[float]:
+def embed_with_retry(client, model: str, input: str, dimensions: Optional[int] = None) -> list[float]:
     """Wrap client.embeddings.create with backoff on 429 and 5xx."""
     kwargs = {"model": model, "input": input}
     if dimensions is not None:
