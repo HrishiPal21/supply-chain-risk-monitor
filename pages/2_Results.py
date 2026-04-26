@@ -117,17 +117,9 @@ conf_html = confidence_badge(conf_level) if conf_level else ""
 # Partial context badge
 partial_html = '<span class="partial-badge">Partial Context</span>' if result.get("partial_context") else ""
 
-# Run ID
+# Run ID and elapsed — shown as caption below banner, not inside HTML
 run_id = st.session_state.get("last_run_id")
-run_id_html = (
-    f"<span style='color:#94a3b8;font-size:0.75rem;'>Run #{run_id}</span>" if run_id else ""
-)
-
-# Elapsed time
 elapsed = st.session_state.get("last_elapsed")
-elapsed_html = (
-    f"<span style='color:#94a3b8;font-size:0.75rem;'>&nbsp;·&nbsp;{elapsed:.1f}s</span>" if elapsed else ""
-)
 
 meta = ""
 if result.get("company"):
@@ -146,13 +138,21 @@ st.markdown(f"""
             <span class="action-badge {action_class}">{_e(action)}</span>
             {conf_html}
             {partial_html}
-            {run_id_html}{elapsed_html}
         </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 st.progress(score / 100)
+
+# Run ID + elapsed as caption below banner
+_meta_parts = []
+if run_id:
+    _meta_parts.append(f"Run #{run_id}")
+if elapsed:
+    _meta_parts.append(f"{elapsed:.1f}s")
+if _meta_parts:
+    st.caption(" · ".join(_meta_parts))
 
 # ── Export buttons ────────────────────────────────────────────────────────────
 with st.expander("Export / Download", expanded=False):
@@ -272,30 +272,8 @@ with tab_exposure:
         summary_text = _e(result.get("exposure_summary") or profile.get("exposure_reasoning", "—"))
         exp_type = _e(profile.get("exposure_type", "unknown"))
 
-        if deps or mits:
-            dep_block = (
-                "<div>"
-                "<div style='color:#64748b;font-size:0.75rem;text-transform:uppercase;"
-                "letter-spacing:.06em;margin-bottom:.3rem;font-weight:600;'>Key Dependencies</div>"
-                "<ul style='color:#374151;font-size:0.85rem;margin:0;padding-left:1.2rem;line-height:1.8;'>"
-                + deps + "</ul></div>"
-            ) if deps else ""
-            mit_block = (
-                "<div>"
-                "<div style='color:#64748b;font-size:0.75rem;text-transform:uppercase;"
-                "letter-spacing:.06em;margin-bottom:.3rem;font-weight:600;'>Mitigations on File</div>"
-                "<ul style='color:#374151;font-size:0.85rem;margin:0;padding-left:1.2rem;line-height:1.8;'>"
-                + mits + "</ul></div>"
-            ) if mits else ""
-            deps_mits_html = (
-                "<div style='display:flex;gap:2rem;margin-top:0.8rem;flex-wrap:wrap;'>"
-                + dep_block + mit_block + "</div>"
-            )
-        else:
-            deps_mits_html = ""
-
         note_html = (
-            "<p style='color:#64748b;font-size:0.85rem;font-style:italic;margin-top:0.5rem;'>"
+            "<p style=\"color:#64748b;font-size:0.85rem;font-style:italic;margin-top:0.5rem;\">"
             + no_company_note + "</p>"
         ) if no_company_note else ""
 
@@ -313,9 +291,23 @@ with tab_exposure:
             {score_line}
             <p style="color:#374151;font-size:0.9rem;margin:0.8rem 0 0 0;line-height:1.6;">{summary_text}</p>
             {note_html}
-            {deps_mits_html}
         </div>
         """, unsafe_allow_html=True)
+
+        key_deps = profile.get("key_dependencies") or []
+        key_mits = profile.get("mitigation_on_file") or []
+        if key_deps or key_mits:
+            dep_col, mit_col = st.columns(2)
+            with dep_col:
+                if key_deps:
+                    st.markdown("**Key Dependencies**")
+                    for d in key_deps:
+                        st.markdown(f"- {d}")
+            with mit_col:
+                if key_mits:
+                    st.markdown("**Mitigations on File**")
+                    for m in key_mits:
+                        st.markdown(f"- {m}")
 
 # ── ANALYST REPORTS ───────────────────────────────────────────────────────────
 with tab_analysts:

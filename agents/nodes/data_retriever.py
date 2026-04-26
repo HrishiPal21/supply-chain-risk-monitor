@@ -61,7 +61,7 @@ def data_retriever(state: AgentState) -> AgentState:
         upload_raw_docs(raw_docs, query)
     except Exception as e:
         source_errors["GCS"] = str(e)
-        logger.warning("GCS upload failed (non-critical): %s", e)
+        logger.info("GCS upload skipped (bucket not configured or unavailable): %s", e)
 
     # Upsert only authoritative sources — EDGAR filings + top news/RSS.
     # HTML scraper chunks are used locally for context but not indexed in Pinecone

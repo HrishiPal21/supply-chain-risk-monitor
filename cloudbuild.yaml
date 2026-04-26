@@ -36,6 +36,9 @@ steps:
       - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/supply-chain/app:$COMMIT_SHA'
       - '--region=us-central1'
       - '--platform=managed'
+      - '--add-cloudsql-instances=$PROJECT_ID:us-central1:supply-chain-db'
+      - '--update-env-vars=CLOUD_SQL_CONNECTION_NAME=$PROJECT_ID:us-central1:supply-chain-db,POSTGRES_DB=supply_chain,POSTGRES_USER=postgres,POSTGRES_HOST=localhost,POSTGRES_PORT=5432'
+      - '--update-secrets=OPENAI_API_KEY=OPENAI_API_KEY:latest,PINECONE_API_KEY=PINECONE_API_KEY:latest,NEWS_API_KEY=NEWS_API_KEY:latest,EDGAR_EMAIL=EDGAR_EMAIL:latest,POSTGRES_PASSWORD=POSTGRES_PASSWORD:latest'
       - '--quiet'
 
 images:

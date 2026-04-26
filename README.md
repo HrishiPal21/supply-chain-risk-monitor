@@ -34,6 +34,13 @@
 
 ## Architecture
 
+### System Architecture
+![System Architecture](assets/system_architecture.png)
+
+### Data Flow Diagram
+![Data Flow Diagram](assets/data_flow_diagram.png)
+
+### Pipeline Detail
 ```mermaid
 flowchart TD
     subgraph ingest["Data Sources"]
