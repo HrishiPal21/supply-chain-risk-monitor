@@ -1,8 +1,18 @@
 steps:
-  # Build the Docker image
+  # Pull the latest image to use as cache
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        docker pull us-central1-docker.pkg.dev/$PROJECT_ID/supply-chain/app:latest || true
+
+  # Build using cache from the latest image
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
+      - '--cache-from'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/supply-chain/app:latest'
       - '-t'
       - 'us-central1-docker.pkg.dev/$PROJECT_ID/supply-chain/app:$COMMIT_SHA'
       - '-t'
@@ -34,3 +44,4 @@ images:
 
 options:
   logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
