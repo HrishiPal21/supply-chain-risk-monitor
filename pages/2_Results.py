@@ -127,7 +127,46 @@ if result.get("company"):
 if result.get("region"):
     meta += f"<strong>Region:</strong> {_e(result['region'])}&nbsp;&nbsp;"
 
-st.markdown(f"""
+st.html(f"""
+<style>
+  .score-banner {{
+    border-radius:14px; padding:1.8rem 2rem; margin-bottom:1.2rem;
+    display:flex; align-items:center; gap:2rem; flex-wrap:wrap;
+    box-shadow:0 2px 8px rgba(0,0,0,0.08); font-family:'Inter',sans-serif;
+  }}
+  .risk-low  {{ background:#f0faf4; border:1.5px solid #86efac; }}
+  .risk-mod  {{ background:#fffbeb; border:1.5px solid #fcd34d; }}
+  .risk-high {{ background:#fff7ed; border:1.5px solid #fdba74; }}
+  .risk-crit {{ background:#fef2f2; border:1.5px solid #fca5a5; }}
+  .score-num {{ font-size:4.5rem; font-weight:800; line-height:1; }}
+  .risk-low  .score-num, .risk-low  .score-label {{ color:#16a34a; }}
+  .risk-mod  .score-num, .risk-mod  .score-label {{ color:#b45309; }}
+  .risk-high .score-num, .risk-high .score-label {{ color:#c2410c; }}
+  .risk-crit .score-num, .risk-crit .score-label {{ color:#dc2626; }}
+  .score-meta {{ flex:1; }}
+  .score-label {{ font-size:1.3rem; font-weight:700; margin-bottom:0.3rem; }}
+  .score-query {{ font-size:0.88rem; opacity:0.75; }}
+  .action-badge {{
+    display:inline-block; padding:0.3rem 1rem; border-radius:20px;
+    font-size:0.82rem; font-weight:600; margin-top:0.5rem;
+  }}
+  .action-watch     {{ background:#dcfce7; color:#15803d; border:1px solid #86efac; }}
+  .action-monitor   {{ background:#fef9c3; color:#854d0e; border:1px solid #fcd34d; }}
+  .action-escalate  {{ background:#ffedd5; color:#c2410c; border:1px solid #fdba74; }}
+  .action-immediate {{ background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; }}
+  .conf-badge {{
+    display:inline-block; padding:0.25rem 0.8rem;
+    border-radius:12px; font-size:0.75rem; font-weight:600;
+  }}
+  .conf-high   {{ background:#dcfce7; color:#15803d; border:1px solid #86efac; }}
+  .conf-medium {{ background:#fef9c3; color:#854d0e; border:1px solid #fcd34d; }}
+  .conf-low    {{ background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; }}
+  .partial-badge {{
+    display:inline-block; padding:0.2rem 0.65rem; border-radius:10px;
+    font-size:0.7rem; font-weight:600; background:#fff7ed;
+    color:#c2410c; border:1px solid #fdba74; vertical-align:middle; margin-left:0.4rem;
+  }}
+</style>
 <div class="score-banner {risk_class}">
     <div class="score-num">{score:.0f}</div>
     <div class="score-meta">
@@ -141,7 +180,7 @@ st.markdown(f"""
         </div>
     </div>
 </div>
-""", unsafe_allow_html=True)
+""")
 
 st.progress(score / 100)
 

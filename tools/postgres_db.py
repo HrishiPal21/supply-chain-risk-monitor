@@ -17,16 +17,28 @@ from config import (
 )
 
 
+import logging as _logging
+_db_logger = _logging.getLogger(__name__)
+
+
 def _conn() -> psycopg2.extensions.connection:
     # On Cloud Run, use Unix socket via Cloud SQL Auth Proxy
     if CLOUD_SQL_CONNECTION_NAME:
-        host = f"/cloudsql/{CLOUD_SQL_CONNECTION_NAME}"
+        socket_dir = f"/cloudsql/{CLOUD_SQL_CONNECTION_NAME}"
+        _db_logger.debug(
+            "Connecting via Cloud SQL socket: dir=%s db=%s user=%s",
+            socket_dir, POSTGRES_DB, POSTGRES_USER,
+        )
         return psycopg2.connect(
             dbname=POSTGRES_DB,
             user=POSTGRES_USER,
             password=POSTGRES_PASSWORD,
-            host=host,
+            host=socket_dir,
         )
+    _db_logger.debug(
+        "Connecting via TCP: host=%s port=%s db=%s user=%s",
+        POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER,
+    )
     return psycopg2.connect(
         host=POSTGRES_HOST,
         port=int(POSTGRES_PORT),
@@ -39,15 +51,12 @@ def _conn() -> psycopg2.extensions.connection:
 _SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "..", "db", "schema.sql")
 
 
-import logging as _logging
-_db_logger = _logging.getLogger(__name__)
-
-
 def _db_available() -> bool:
     try:
         _conn().close()
         return True
-    except Exception:
+    except Exception as exc:
+        _db_logger.info("DB not available: %s", exc)
         return False
 
 
