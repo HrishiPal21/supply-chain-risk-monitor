@@ -1,0 +1,36 @@
+steps:
+  # Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/supply-chain/app:$COMMIT_SHA'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/$PROJECT_ID/supply-chain/app:latest'
+      - '.'
+
+  # Push both tags
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/supply-chain/app:$COMMIT_SHA']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/supply-chain/app:latest']
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'supply-chain-risk'
+      - '--image=us-central1-docker.pkg.dev/$PROJECT_ID/supply-chain/app:$COMMIT_SHA'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--quiet'
+
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/supply-chain/app:$COMMIT_SHA'
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/supply-chain/app:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
