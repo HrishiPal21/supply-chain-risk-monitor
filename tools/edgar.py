@@ -11,11 +11,11 @@ import logging
 from typing import Optional
 
 from sec_edgar_downloader import Downloader
+from config import EDGAR_EMAIL, EDGAR_UA
 
 logger = logging.getLogger(__name__)
 
 _DL_DIR = "data/edgar_cache"
-_EDGAR_UA = "SupplyChainRiskMonitor pal.h@northeastern.edu"
 _CACHE_TTL_SECONDS = 7 * 24 * 3600  # re-download after 7 days
 
 
@@ -40,7 +40,7 @@ def _resolve_company_to_identifier(name_or_ticker: str) -> Optional[str]:
         "&count=5&search_text=&action=getcompany&output=atom"
     )
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": _EDGAR_UA})
+        req = urllib.request.Request(url, headers={"User-Agent": EDGAR_UA})
         with urllib.request.urlopen(req, timeout=10) as resp:
             xml_text = resp.read().decode("utf-8")
 
@@ -88,7 +88,7 @@ def fetch_edgar_filings(
             logger.info("EDGAR cache for %s expired — clearing and re-downloading", identifier)
             shutil.rmtree(ticker_dir, ignore_errors=True)
 
-    dl = Downloader("SupplyChainRiskMonitor", "pal.h@northeastern.edu", _DL_DIR)
+    dl = Downloader("SupplyChainRiskMonitor", EDGAR_EMAIL, _DL_DIR)
 
     try:
         dl.get(form_type, identifier, limit=limit)

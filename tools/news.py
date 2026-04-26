@@ -57,3 +57,38 @@ def fetch_news(query: str, page_size: int = 20) -> list[dict]:
             })
 
     return docs
+
+
+def fetch_trending_headlines(page_size: int = 6) -> list[dict]:
+    """Return raw article headlines for the trending scenarios widget (last 7 days)."""
+    if not NEWS_API_KEY:
+        return []
+
+    from_date = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d")
+    params = {
+        "q": "supply chain disruption OR trade tariff OR logistics disruption OR port congestion OR semiconductor shortage",
+        "sortBy": "publishedAt",
+        "language": "en",
+        "pageSize": page_size,
+        "from": from_date,
+        "apiKey": NEWS_API_KEY,
+    }
+    try:
+        resp = requests.get(_BASE_URL, params=params, timeout=10)
+        resp.raise_for_status()
+        articles = resp.json().get("articles", [])
+        return [
+            {
+                "title": a.get("title", "")[:100],
+                "desc": a.get("description", "")[:150] or "Recent supply chain news",
+                "query": a.get("title", ""),
+                "url": a.get("url", ""),
+                "published_at": a.get("publishedAt", ""),
+                "region": "",
+                "company": "",
+            }
+            for a in articles
+            if a.get("title") and "[Removed]" not in a.get("title", "")
+        ]
+    except Exception:
+        return []

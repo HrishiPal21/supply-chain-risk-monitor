@@ -22,3 +22,4 @@ class AgentState(TypedDict):
     final_output: Optional[dict]
     partial_context: bool             # True if any data source failed
     failed_sources: list[str]         # names of sources that errored
+    source_errors: Optional[dict]     # {source_name: error_message} for debuggability

@@ -1,40 +1,23 @@
-import sys, os
+import sys, os, time
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import streamlit as st
 from agents.graph import run_pipeline
 from tools.postgres_db import save_run, init_db
+from tools.news import fetch_trending_headlines
+from tools.pinecone_client import ensure_index
+from ui.theme import apply_theme
+from ui.sidebar import render_sidebar
 
 st.set_page_config(page_title="Search · Supply Chain Risk", layout="wide", page_icon="🔍")
 
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-
-    [data-testid="stAppViewContainer"] { background: #f0f4f8; }
-    [data-testid="stSidebar"] { background: linear-gradient(180deg, #0f2444 0%, #1a3a5c 100%); border-right: none; }
-    [data-testid="stSidebar"] * { color: #e2edf7 !important; }
-    [data-testid="stSidebarNav"] a { color: #a8c4e0 !important; }
-    [data-testid="stSidebarNav"] a:hover { color: #fff !important; }
-    [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] { background: rgba(255,255,255,0.08) !important; border-color: rgba(255,255,255,0.2) !important; }
-    [data-testid="stSidebar"] button { background: rgba(255,255,255,0.12) !important; border-color: rgba(255,255,255,0.25) !important; color: #fff !important; }
-    header[data-testid="stHeader"] { background: transparent; }
-
-    .page-header {
-        background: linear-gradient(135deg, #0f2444 0%, #1a5276 100%);
-        border-radius: 12px; padding: 1.8rem 2rem; margin-bottom: 1.5rem;
-    }
-    .page-header h1 { color: #fff; font-size: 1.8rem; font-weight: 800; margin: 0 0 0.2rem 0; }
-    .page-header p  { color: #a8c4e0; margin: 0; font-size: 0.9rem; }
-
+apply_theme("""
     textarea, input[type="text"] {
         background: #fff !important; color: #0f2444 !important;
         border: 1.5px solid #c8daf0 !important; border-radius: 8px !important;
     }
     textarea:focus, input[type="text"]:focus { border-color: #1a5276 !important; }
 
-    /* Pipeline banner */
     .status-box {
         background: #e8f0f9; border: 1px solid #c8daf0;
         border-left: 4px solid #1a5276;
@@ -47,27 +30,37 @@ st.markdown("""
     }
     .arrow { color: #93b8d4; font-size: 0.8rem; }
 
-    /* Section label */
-    .section-label {
-        color: #1a3a5c; font-size: 0.75rem; text-transform: uppercase;
-        letter-spacing: 0.08em; margin-bottom: 0.6rem; font-weight: 700;
+    .trending-label {
+        font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.1em; color: #0ea5e9;
+        background: #e0f2fe; border-radius: 4px;
+        padding: 0.15rem 0.6rem; display: inline-block; margin-bottom: 0.5rem;
+    }
+    .standard-label {
+        font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.1em; color: #64748b;
+        background: #f1f5f9; border-radius: 4px;
+        padding: 0.15rem 0.6rem; display: inline-block; margin-bottom: 0.5rem; margin-top: 0.8rem;
     }
 
-    /* Streamlit buttons as scenario tiles */
     div[data-testid="stButton"] > button {
-        background: #fff !important; border: 1.5px solid #e2e8f0 !important;
+        background: #fff !important; border: 1px solid #e2e8f0 !important;
+        border-left: 3px solid #1a5276 !important;
         color: #0f2444 !important; border-radius: 10px !important;
-        padding: 0.8rem !important; text-align: left !important;
+        padding: 0.9rem 1rem !important; text-align: left !important;
         font-size: 0.85rem !important; line-height: 1.5 !important;
+        min-height: 110px !important; height: 110px !important;
+        align-items: flex-start !important; white-space: pre-wrap !important;
+        overflow: hidden !important;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         transition: border-color 0.15s, box-shadow 0.15s !important;
     }
     div[data-testid="stButton"] > button:hover {
         border-color: #1a5276 !important;
+        border-left-color: #0f2444 !important;
         box-shadow: 0 3px 10px rgba(26,82,118,0.12) !important;
     }
 
-    /* Form submit button */
     div[data-testid="stFormSubmitButton"] > button {
         background: linear-gradient(135deg, #0f2444, #1a5276) !important;
         color: #fff !important; border: none !important;
@@ -79,16 +72,12 @@ st.markdown("""
         box-shadow: 0 4px 16px rgba(15,36,68,0.35) !important;
     }
 
-    /* Radio */
     div[data-testid="stRadio"] label { color: #1a3a5c !important; font-weight: 500; }
-
-    /* Selectbox */
     div[data-testid="stSelectbox"] label { color: #1a3a5c !important; font-weight: 600; }
-
-    /* Divider */
     hr { border-color: #e2e8f0 !important; }
-</style>
+""")
 
+st.markdown("""
 <div class="page-header">
     <h1>Supply Chain Risk Analysis</h1>
     <p>Pick a scenario, use the guided builder, or write your own — the 7-agent pipeline does the rest.</p>
@@ -97,10 +86,12 @@ st.markdown("""
 
 
 @st.cache_resource
-def _init_db_once():
+def _startup_once():
     init_db()
+    ensure_index()
 
-_init_db_once()
+_startup_once()
+render_sidebar()
 
 # ── Pipeline banner ────────────────────────────────────────────────────────────
 st.markdown("""
@@ -194,8 +185,29 @@ SCENARIOS = [
     },
 ]
 
+@st.cache_data(ttl=6 * 3600, show_spinner=False)
+def _get_trending() -> list[dict]:
+    return fetch_trending_headlines(page_size=6)
+
+
 if mode == "Quick Scenarios":
-    st.markdown('<div class="section-label">Choose a scenario to pre-fill the query</div>', unsafe_allow_html=True)
+    trending = _get_trending()
+    if trending:
+        st.markdown('<span class="trending-label">Trending — updated today</span>', unsafe_allow_html=True)
+        tcols = st.columns(3)
+        for i, tile in enumerate(trending[:6]):
+            with tcols[i % 3]:
+                if st.button(
+                    f"{tile['title']}\n\n_{tile['desc'][:80]}{'…' if len(tile['desc']) > 80 else ''}_",
+                    key=f"trend_{i}",
+                    use_container_width=True,
+                ):
+                    st.session_state["prefill_query"] = tile["query"]
+                    st.session_state["prefill_company"] = tile["company"]
+                    st.session_state["prefill_region"] = tile["region"]
+                    st.rerun()
+
+    st.markdown('<span class="standard-label">Standard Scenarios</span>', unsafe_allow_html=True)
     cols = st.columns(3)
     for i, scenario in enumerate(SCENARIOS):
         with cols[i % 3]:
@@ -266,7 +278,7 @@ elif mode == "Guided Builder":
         st.success(f"**Built query:** {st.session_state['prefill_query']}")
 
 # ==============================================================================
-# MODE 3 — Custom Query (original blank form)
+# MODE 3 — Custom Query
 # ==============================================================================
 else:
     st.markdown('<div class="section-label">Write your own scenario</div>', unsafe_allow_html=True)
@@ -284,9 +296,12 @@ st.markdown("---")
 st.markdown('<div class="section-label">Review & run</div>', unsafe_allow_html=True)
 
 with st.form("query_form"):
+    _q = st.session_state.get("prefill_query") or st.session_state.get("last_query", "")
+    _c = st.session_state.get("prefill_company") or st.session_state.get("last_company", "")
+    _r = st.session_state.get("prefill_region") or st.session_state.get("last_region", "")
     query = st.text_area(
         "Query",
-        value=st.session_state.get("prefill_query", ""),
+        value=_q,
         height=100,
         label_visibility="collapsed",
         placeholder="Your scenario will appear here — or type directly.",
@@ -294,12 +309,12 @@ with st.form("query_form"):
     col1, col2 = st.columns(2)
     company = col1.text_input(
         "Company name or ticker (optional)",
-        value=st.session_state.get("prefill_company", ""),
+        value=_c,
         placeholder="e.g. Apple, Nike, AAPL, TSMC",
     )
     region = col2.text_input(
         "Region (optional)",
-        value=st.session_state.get("prefill_region", ""),
+        value=_r,
         placeholder="e.g. Taiwan, Southeast Asia",
     )
     submitted = st.form_submit_button("Run Analysis", use_container_width=True, type="primary")
@@ -312,6 +327,7 @@ if submitted and query.strip():
         ph_analysts  = st.empty()
         ph_judge     = st.empty()
         ph_guardrail = st.empty()
+        ph_timing    = st.empty()
 
         ph_data.write("Fetching news, RSS, HTML sources & EDGAR filings...")
         ph_exposure.write("Exposure assessment — queued")
@@ -319,8 +335,10 @@ if submitted and query.strip():
         ph_judge.write("Judge — queued")
         ph_guardrail.write("GuardRail — queued")
 
+        t0 = time.time()
         try:
             result = run_pipeline(query=query, company=company, region=region)
+            elapsed = time.time() - t0
 
             doc_count = len(result.get("retrieved_docs", []))
             failed_sources = result.get("failed_sources", [])
@@ -330,15 +348,20 @@ if submitted and query.strip():
             ph_judge.write(f"Judge — raw score {result.get('raw_risk_score', '?'):.0f} → adjusted {result.get('risk_score', '?'):.0f}")
             confidence = (result.get("guardrail_report") or {}).get("overall_confidence", "?")
             ph_guardrail.write(f"GuardRail — confidence {confidence}")
+            ph_timing.caption(f"Total elapsed: {elapsed:.1f}s")
 
             run_id = save_run(result)
             st.session_state["last_result"] = result
             st.session_state["last_run_id"] = run_id
+            st.session_state["last_elapsed"] = elapsed
+            st.session_state["last_query"]   = query
+            st.session_state["last_company"] = company
+            st.session_state["last_region"]  = region
             st.session_state["prefill_query"]   = ""
             st.session_state["prefill_company"] = ""
             st.session_state["prefill_region"]  = ""
             run_label = f"run #{run_id}" if run_id else "session (DB offline)"
-            status.update(label=f"Analysis complete — {run_label}", state="complete")
+            status.update(label=f"Analysis complete — {run_label} · {elapsed:.1f}s", state="complete")
 
             score = result.get("risk_score") or 0
             label = (result.get("final_output") or {}).get("risk_label", "")
@@ -354,6 +377,10 @@ if submitted and query.strip():
             elif doc_count == 0:
                 st.warning("No documents were retrieved. Analysis is based on query alone — treat results with caution.")
 
+        except EnvironmentError as e:
+            status.update(label="Configuration error", state="error")
+            st.error(f"Configuration error: {e}")
+            st.info("Check your `.env` file and make sure all required API keys are set, then restart the app.")
         except Exception as e:
             status.update(label="Pipeline error", state="error")
             st.error(f"{e}")

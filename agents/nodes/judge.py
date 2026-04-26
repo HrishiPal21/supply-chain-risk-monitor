@@ -110,16 +110,19 @@ def judge(state: AgentState) -> AgentState:
     raw_score = float(verdict_dict.get("risk_score", 50))
     adjusted_score = round(raw_score * multiplier, 1)
 
-    # Recalculate label and action based on adjusted score
+    # Store both scores explicitly — never overwrite the LLM's raw output
+    verdict_dict["risk_score_raw"] = raw_score
+    verdict_dict["risk_score_adjusted"] = adjusted_score
+    # Keep risk_score as the adjusted value for backward-compat with anything reading final_output
     verdict_dict["risk_score"] = adjusted_score
     verdict_dict["risk_label"] = _label(adjusted_score, _LABEL_FOR_SCORE)
     verdict_dict["recommended_action"] = _label(adjusted_score, _ACTION_FOR_SCORE)
 
     logger.info(
-        "Judge: raw_score=%.1f multiplier=%.2f adjusted_score=%.1f label=%s action=%s",
+        "Judge: raw=%.1f × multiplier=%.2f → adjusted=%.1f  label=%s  action=%s",
         raw_score, multiplier, adjusted_score,
-        verdict_dict.get("risk_label", "?"),
-        verdict_dict.get("recommended_action", "?"),
+        verdict_dict["risk_label"],
+        verdict_dict["recommended_action"],
     )
 
     return {

@@ -1,6 +1,7 @@
 from agents.state import AgentState
-from config import get_openai_client, OPENAI_MODEL
+from config import get_openai_client, OPENAI_MODEL as ANALYST_MODEL
 from tools.retry import chat_with_retry
+from tools.doc_sanitizer import format_docs_safe, DOCUMENT_TRUST_POLICY
 
 SYSTEM_PROMPT = """You are a Geopolitical Analyst specializing in how political
 events, conflicts, trade policy, and diplomatic relations affect global supply chains.
@@ -12,21 +13,25 @@ Analyze:
 - Critical mineral / resource nationalism trends
 - Historical precedents of disruption in this region/sector
 
+CITATION REQUIREMENT: Every specific claim must cite its source document inline
+using the format [DOC N] — e.g. "Export controls were tightened in Q1 [DOC 3]."
+If a claim has no supporting document, label it (inferred).
+
 Format your response as:
 ## Geopolitical Risk Analysis
-### Active Threats (bullet list with region and risk type)
+### Active Threats (bullet list with region, risk type, and [DOC N] citations)
 ### Trade Policy Landscape
 ### Historical Precedents
 ### Geopolitical Risk Rating: [Low / Medium / High / Critical]
-"""
+""" + DOCUMENT_TRUST_POLICY
 
 
 def geopolitical_analyst(state: AgentState) -> AgentState:
     client = get_openai_client()
-    context = _format_docs(state["retrieved_docs"])
+    context = format_docs_safe(state["retrieved_docs"], max_docs=5)
 
     response = chat_with_retry(client,
-        model=OPENAI_MODEL,
+        model=ANALYST_MODEL,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {
@@ -45,10 +50,6 @@ def geopolitical_analyst(state: AgentState) -> AgentState:
         ],
         temperature=0.3,
     )
-    return {**state, "geopolitical_analysis": response.choices[0].message.content}
+    return {"geopolitical_analysis": response.choices[0].message.content}
 
 
-def _format_docs(docs: list[dict]) -> str:
-    return "\n\n---\n\n".join(
-        f"[{d.get('source', 'unknown')}] {d.get('text', '')}" for d in docs[:8]
-    )

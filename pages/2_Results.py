@@ -2,6 +2,8 @@ import json
 import html as _html
 import streamlit as st
 from tools.postgres_db import get_recent_runs, get_run_by_id
+from ui.theme import apply_theme, source_badge, confidence_badge
+from ui.sidebar import render_sidebar
 
 def _e(text: str) -> str:
     """HTML-escape dynamic LLM text before injecting into markup."""
@@ -9,23 +11,7 @@ def _e(text: str) -> str:
 
 st.set_page_config(page_title="Results · Supply Chain Risk", layout="wide", page_icon="📊")
 
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-
-    [data-testid="stAppViewContainer"] { background: #f0f4f8; }
-    [data-testid="stSidebar"] { background: linear-gradient(180deg, #0f2444 0%, #1a3a5c 100%); border-right: none; }
-    [data-testid="stSidebar"] * { color: #e2edf7 !important; }
-    [data-testid="stSidebarNav"] a { color: #a8c4e0 !important; }
-    [data-testid="stSidebarNav"] a:hover { color: #fff !important; }
-    [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] { background: rgba(255,255,255,0.08) !important; border-color: rgba(255,255,255,0.2) !important; }
-    [data-testid="stSidebar"] button { background: rgba(255,255,255,0.12) !important; border-color: rgba(255,255,255,0.25) !important; color: #fff !important; }
-    header[data-testid="stHeader"] { background: transparent; }
-
-    .page-header h1 { color: #0f2444; font-size: 1.8rem; font-weight: 800; margin-bottom: 0.2rem; padding-top: 1rem; }
-    .page-header p  { color: #64748b; margin: 0 0 1.2rem 0; }
-
+apply_theme("""
     /* Score banner */
     .score-banner {
         border-radius: 14px; padding: 1.8rem 2rem;
@@ -38,7 +24,7 @@ st.markdown("""
     .score-banner .score-label { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.3rem; }
     .score-banner .score-query { font-size: 0.88rem; opacity: 0.75; }
 
-    /* Risk colours — light theme */
+    /* Risk colour variants */
     .risk-low  { background: #f0faf4; border: 1.5px solid #86efac; }
     .risk-mod  { background: #fffbeb; border: 1.5px solid #fcd34d; }
     .risk-high { background: #fff7ed; border: 1.5px solid #fdba74; }
@@ -49,48 +35,17 @@ st.markdown("""
     .risk-high .score-num, .risk-high .score-label { color: #c2410c; }
     .risk-crit .score-num, .risk-crit .score-label { color: #dc2626; }
 
-    /* Action badge */
-    .action-badge {
-        display: inline-block; padding: 0.3rem 1rem;
-        border-radius: 20px; font-size: 0.82rem; font-weight: 600; margin-top: 0.5rem;
-    }
-    .action-watch     { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
-    .action-monitor   { background: #fef9c3; color: #854d0e; border: 1px solid #fcd34d; }
-    .action-escalate  { background: #ffedd5; color: #c2410c; border: 1px solid #fdba74; }
-    .action-immediate { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
-
-    /* Cards */
-    .card {
-        background: #ffffff; border: 1px solid #e2e8f0;
-        border-radius: 12px; padding: 1.2rem; height: 100%;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-    }
-    .card h4 {
-        color: #1a3a5c; font-size: 0.8rem; text-transform: uppercase;
-        letter-spacing: 0.06em; margin: 0 0 0.8rem 0; font-weight: 700;
-    }
-    .card ul { margin: 0; padding-left: 1.2rem; color: #374151; font-size: 0.88rem; line-height: 1.9; }
-
-    /* Verdict box */
-    .verdict-box {
-        background: #ffffff; border: 1px solid #e2e8f0;
-        border-left: 4px solid #1a5276; border-radius: 8px;
-        padding: 1.2rem 1.4rem; color: #374151;
-        font-size: 0.93rem; line-height: 1.75; margin-bottom: 1.2rem;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    /* Partial-context badge */
+    .partial-badge {
+        display: inline-block; padding: 0.2rem 0.65rem;
+        border-radius: 10px; font-size: 0.7rem; font-weight: 600;
+        background: #fff7ed; color: #c2410c; border: 1px solid #fdba74;
+        vertical-align: middle; margin-left: 0.4rem;
     }
 
-    /* Tabs */
-    [data-testid="stTabs"] button { color: #64748b !important; font-weight: 500; }
-    [data-testid="stTabs"] button[aria-selected="true"] {
-        color: #0f2444 !important; border-bottom-color: #1a5276 !important; font-weight: 700;
-    }
-
-    /* Expanders */
-    details { background: #fff; border: 1px solid #e2e8f0 !important; border-radius: 8px !important; }
-    summary { color: #0f2444 !important; font-weight: 500; }
-</style>
-""", unsafe_allow_html=True)
+    /* Source doc expander header badges inline */
+    .src-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.3rem; }
+""")
 
 # ── Run selector ──────────────────────────────────────────────────────────────
 result = st.session_state.get("last_result")
@@ -103,11 +58,18 @@ def _cached_recent_runs() -> list[dict]:
         return []
 
 
+render_sidebar()
+
 with st.sidebar:
-    st.markdown("### Load a past run")
+    st.markdown("""
+    <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:0.9rem; margin-top:0.5rem;">
+        <div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.09em;
+                    color:#a8c4e0; font-weight:600; margin-bottom:0.6rem;">Load Past Run</div>
+    </div>
+    """, unsafe_allow_html=True)
     recent = _cached_recent_runs()
     if recent:
-        options = {f"#{r['id']} — {r['query'][:45]}": r["id"] for r in recent}
+        options = {f"#{r['id']} — {r['query'][:40]}": r["id"] for r in recent}
         chosen = st.selectbox("Select run", list(options.keys()), label_visibility="collapsed")
         if st.button("Load run", use_container_width=True):
             result = get_run_by_id(options[chosen])
@@ -147,6 +109,26 @@ action_class = {
     "Immediate Action": "action-immediate",
 }.get(action, "action-monitor")
 
+# Confidence badge
+gr = result.get("guardrail_report") or {}
+conf_level = gr.get("overall_confidence", "")
+conf_html = confidence_badge(conf_level) if conf_level else ""
+
+# Partial context badge
+partial_html = '<span class="partial-badge">Partial Context</span>' if result.get("partial_context") else ""
+
+# Run ID
+run_id = st.session_state.get("last_run_id")
+run_id_html = (
+    f"<span style='color:#94a3b8;font-size:0.75rem;'>Run #{run_id}</span>" if run_id else ""
+)
+
+# Elapsed time
+elapsed = st.session_state.get("last_elapsed")
+elapsed_html = (
+    f"<span style='color:#94a3b8;font-size:0.75rem;'>&nbsp;·&nbsp;{elapsed:.1f}s</span>" if elapsed else ""
+)
+
 meta = ""
 if result.get("company"):
     meta += f"<strong>Company:</strong> {_e(result['company'])}&nbsp;&nbsp;"
@@ -160,12 +142,78 @@ st.markdown(f"""
         <div class="score-label">{_e(label)} Risk</div>
         <div class="score-query">{_e(result.get('query', ''))}</div>
         <div style="margin-top:0.3rem; color:#64748b; font-size:0.85rem;">{meta}</div>
-        <span class="action-badge {action_class}">{_e(action)}</span>
+        <div style="margin-top:0.5rem; display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+            <span class="action-badge {action_class}">{_e(action)}</span>
+            {conf_html}
+            {partial_html}
+            {run_id_html}{elapsed_html}
+        </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 st.progress(score / 100)
+
+# ── Export buttons ────────────────────────────────────────────────────────────
+with st.expander("Export / Download", expanded=False):
+    export_data = {
+        "query": result.get("query"),
+        "company": result.get("company"),
+        "region": result.get("region"),
+        "risk_score": result.get("risk_score"),
+        "exposure_level": result.get("exposure_level"),
+        "final_output": result.get("final_output"),
+        "guardrail_report": result.get("guardrail_report"),
+        "exposure_profile": result.get("exposure_profile"),
+    }
+    col_j, col_m = st.columns(2)
+
+    col_j.download_button(
+        label="Download JSON",
+        data=json.dumps(export_data, indent=2, default=str),
+        file_name="supply_chain_risk_report.json",
+        mime="application/json",
+        use_container_width=True,
+    )
+
+    def _build_markdown() -> str:
+        fo = result.get("final_output") or {}
+        lines = [
+            f"# Supply Chain Risk Report",
+            f"",
+            f"**Query:** {result.get('query', '')}",
+        ]
+        if result.get("company"):
+            lines.append(f"**Company:** {result['company']}")
+        if result.get("region"):
+            lines.append(f"**Region:** {result['region']}")
+        lines += [
+            f"",
+            f"## Risk Score: {score:.0f}/100 — {label}",
+            f"**Recommended Action:** {action}",
+            f"**Confidence:** {conf_level or '—'}",
+            f"",
+            f"## Judge Verdict",
+            result.get("judge_verdict") or "—",
+            f"",
+            f"## Top Risks",
+        ]
+        for r in fo.get("top_3_risks", []):
+            lines.append(f"- {r}")
+        lines += ["", "## Top Mitigants"]
+        for m in fo.get("top_3_mitigants", []):
+            lines.append(f"- {m}")
+        lines += ["", "## Exposure", f"**Level:** {result.get('exposure_level', '—')}",
+                  result.get("exposure_summary") or "—"]
+        return "\n".join(lines)
+
+    col_m.download_button(
+        label="Download Markdown",
+        data=_build_markdown(),
+        file_name="supply_chain_risk_report.md",
+        mime="text/markdown",
+        use_container_width=True,
+    )
 
 # ── Main tabs ─────────────────────────────────────────────────────────────────
 tab_overview, tab_exposure, tab_analysts, tab_sources = st.tabs(
@@ -200,7 +248,8 @@ with tab_exposure:
         st.info("No exposure data for this run.")
     else:
         profile = result.get("exposure_profile") or {}
-        raw_score_val = result.get("raw_risk_score")
+        raw_score_val = final.get("risk_score_raw") or result.get("raw_risk_score")
+        adj_score_val = final.get("risk_score_adjusted") or result.get("risk_score") or score
         multiplier = result.get("exposure_multiplier", 1.0)
 
         exp_color = {
@@ -215,7 +264,7 @@ with tab_exposure:
             f"<br><span style='color:#64748b;font-size:0.82rem;'>"
             f"Macro risk score: <strong>{raw_score_val:.0f}</strong> × "
             f"exposure {multiplier:.2f} = "
-            f"<strong style='color:{exp_color};'>{score:.0f}</strong></span>"
+            f"<strong style='color:{exp_color};'>{adj_score_val:.0f}</strong></span>"
             if raw_score_val is not None else ""
         )
 
@@ -286,10 +335,6 @@ with tab_sources:
     if not docs:
         st.info("No source documents recorded for this run.")
     else:
-        SOURCE_ICONS = {
-            "HTML": "Web", "RSS": "RSS",
-            "NewsAPI": "News", "EDGAR": "EDGAR", "Pinecone": "Vector",
-        }
         grouped: dict[str, list[dict]] = defaultdict(list)
         for d in docs:
             prefix = d.get("source", "Unknown").split("/")[0]
@@ -297,14 +342,19 @@ with tab_sources:
 
         cols = st.columns(len(grouped) or 1)
         for col, (src_type, src_docs) in zip(cols, grouped.items()):
-            icon = SOURCE_ICONS.get(src_type, "")
-            col.metric(f"{icon} {src_type}".strip(), f"{len(src_docs)} docs")
+            col.metric(src_type, f"{len(src_docs)} docs")
 
         st.markdown("<br>", unsafe_allow_html=True)
         for i, doc in enumerate(docs, 1):
             src = doc.get("source", "Unknown")
             url = doc.get("url", "")
             snippet = (doc.get("text") or "")[:300].replace("\n", " ")
-            label = f"**{i}. {src}**" + (f"  —  [{url[:60]}]({url})" if url else "")
-            with st.expander(label, expanded=False):
+            badge_html = source_badge(src)
+            url_part = f"  —  [{url[:60]}]({url})" if url else ""
+            header = f"**{i}. {src}**{url_part}"
+            with st.expander(header, expanded=False):
+                st.markdown(
+                    f'<div class="src-row">{badge_html}</div>',
+                    unsafe_allow_html=True,
+                )
                 st.caption(snippet + ("…" if len(doc.get("text", "")) > 300 else ""))

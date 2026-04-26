@@ -23,6 +23,7 @@ import logging
 from agents.state import AgentState
 from config import get_openai_client, OPENAI_MODEL
 from tools.retry import chat_with_retry
+from tools.doc_sanitizer import sanitize_doc_text, DOCUMENT_TRUST_POLICY
 
 logger = logging.getLogger(__name__)
 
@@ -75,15 +76,16 @@ CRITICAL RULES:
 - If EDGAR filings are present, prioritize them — they are the most authoritative source.
 - If documents don't mention the company's sourcing, say so explicitly in reasoning.
 - Never invent dependencies not supported by the documents.
-"""
+""" + DOCUMENT_TRUST_POLICY
 
 
 def _format_docs(docs: list[dict], max_docs: int = 20) -> str:
     lines = []
     for d in docs[:max_docs]:
         src = d.get("source", "unknown")
-        text = d.get("text", "")
-        lines.append(f"[{src}]\n{text}")
+        text = sanitize_doc_text(d.get("text", ""))
+        if text.strip():
+            lines.append(f"[{src}]\n{text}")
     return "\n\n---\n\n".join(lines)
 
 
@@ -101,10 +103,10 @@ def exposure_assessment(state: AgentState) -> AgentState:
     if edgar_docs:
         context_parts.append(
             f"=== SEC EDGAR FILINGS FOR {company.upper()} ===\n"
-            + _format_docs(edgar_docs, max_docs=10)
+            + _format_docs(edgar_docs, max_docs=5)
         )
     context_parts.append(
-        "=== NEWS / WEB SOURCES ===\n" + _format_docs(other_docs, max_docs=12)
+        "=== NEWS / WEB SOURCES ===\n" + _format_docs(other_docs, max_docs=6)
     )
     context = "\n\n".join(context_parts)
 

@@ -28,7 +28,7 @@ def chat_with_retry(client, **kwargs):
 
 
 def embed_with_retry(client, model: str, input: str, dimensions: Optional[int] = None) -> list[float]:
-    """Wrap client.embeddings.create with backoff on 429 and 5xx."""
+    """Embed a single text with backoff on 429 and 5xx."""
     kwargs = {"model": model, "input": input}
     if dimensions is not None:
         kwargs["dimensions"] = dimensions
@@ -45,4 +45,23 @@ def embed_with_retry(client, model: str, input: str, dimensions: Optional[int] =
             if exc.status_code < 500 or attempt == len(_DELAYS):
                 raise
             logger.warning("OpenAI embed server error %d — retrying in %ds (attempt %d)", exc.status_code, delay, attempt)
+            time.sleep(delay)
+
+
+def embed_batch_with_retry(client, model: str, inputs: list[str]) -> list[list[float]]:
+    """Embed a batch of texts in a single API call with backoff on 429 and 5xx."""
+    for attempt, delay in enumerate(_DELAYS, 1):
+        try:
+            resp = client.embeddings.create(model=model, input=inputs)
+            ordered = sorted(resp.data, key=lambda x: x.index)
+            return [item.embedding for item in ordered]
+        except RateLimitError:
+            if attempt == len(_DELAYS):
+                raise
+            logger.warning("OpenAI batch embed rate limit — retrying in %ds (attempt %d)", delay, attempt)
+            time.sleep(delay)
+        except APIStatusError as exc:
+            if exc.status_code < 500 or attempt == len(_DELAYS):
+                raise
+            logger.warning("OpenAI batch embed server error %d — retrying in %ds (attempt %d)", exc.status_code, delay, attempt)
             time.sleep(delay)

@@ -1,30 +1,16 @@
 import json
+import html as _html
 import streamlit as st
+from ui.theme import apply_theme
+from ui.sidebar import render_sidebar
+
+def _e(text: str) -> str:
+    return _html.escape(str(text or ""))
 
 st.set_page_config(page_title="GuardRail · Supply Chain Risk", layout="wide", page_icon="🛡️")
 
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-
-    [data-testid="stAppViewContainer"] { background: #f0f4f8; }
-    [data-testid="stSidebar"] { background: linear-gradient(180deg, #0f2444 0%, #1a3a5c 100%); border-right: none; }
-    [data-testid="stSidebar"] * { color: #e2edf7 !important; }
-    [data-testid="stSidebarNav"] a { color: #a8c4e0 !important; }
-    [data-testid="stSidebarNav"] a:hover { color: #fff !important; }
-    [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] { background: rgba(255,255,255,0.08) !important; border-color: rgba(255,255,255,0.2) !important; }
-    [data-testid="stSidebar"] button { background: rgba(255,255,255,0.12) !important; border-color: rgba(255,255,255,0.25) !important; color: #fff !important; }
-    header[data-testid="stHeader"] { background: transparent; }
-
-    .page-header {
-        background: linear-gradient(135deg, #0f2444 0%, #1a5276 100%);
-        border-radius: 12px; padding: 1.8rem 2rem; margin-bottom: 1.5rem;
-    }
-    .page-header h1 { color: #fff; font-size: 1.8rem; font-weight: 800; margin: 0 0 0.2rem 0; }
-    .page-header p  { color: #a8c4e0; margin: 0; font-size: 0.88rem; }
-
-    /* Trust card */
+apply_theme("""
+    /* Trust score cards */
     .trust-card {
         background: #ffffff; border: 1px solid #e2e8f0;
         border-radius: 12px; padding: 1.4rem; text-align: center;
@@ -44,7 +30,7 @@ st.markdown("""
     .fill-med   { background: #f59e0b; }
     .fill-low   { background: #dc2626; }
 
-    /* Confidence banner */
+    /* Confidence band */
     .conf-banner {
         background: #ffffff; border: 1px solid #e2e8f0;
         border-radius: 12px; padding: 1.4rem 2rem;
@@ -59,7 +45,7 @@ st.markdown("""
     }
     .conf-metric .value { color: #0f2444; font-size: 1.8rem; font-weight: 700; }
 
-    /* Flag card */
+    /* Flagged claim cards */
     .flag-card {
         background: #fff7ed; border: 1px solid #fdba74;
         border-left: 4px solid #c2410c; border-radius: 8px;
@@ -69,20 +55,23 @@ st.markdown("""
     .flag-card .flag-claim { color: #1a2744; font-size: 0.9rem; margin: 0.4rem 0; }
     .flag-card .flag-issue { color: #64748b; font-size: 0.84rem; }
 
-    /* Notes box */
+    /* Notes */
     .notes-box {
         background: #ffffff; border: 1px solid #e2e8f0;
         border-left: 4px solid #1a5276; border-radius: 8px;
         padding: 1rem 1.4rem; color: #374151;
         font-size: 0.9rem; line-height: 1.75; margin-top: 1.2rem;
     }
-</style>
+""")
 
+st.markdown("""
 <div class="page-header">
     <h1>GuardRail Monitor</h1>
     <p>Agent trust scores, hallucination flags, and confidence bands from the meta-agent.</p>
 </div>
 """, unsafe_allow_html=True)
+
+render_sidebar()
 
 result = st.session_state.get("last_result")
 if not result:
@@ -97,7 +86,7 @@ if isinstance(report, str):
         report = None
 
 if not report:
-    st.warning("No guardrail report available for this run.")
+    st.warning("No GuardRail report available for this run.")
     st.stop()
 
 # ── Trust scores ──────────────────────────────────────────────────────────────
@@ -152,11 +141,14 @@ st.markdown(f"### Flagged Claims &nbsp;<span style='background:#21262d;border:1p
 
 if flagged:
     for flag in flagged:
+        issue  = _e(flag.get('issue', '—'))
+        detail = _e(flag.get('detail', ''))
+        detail_html = f"<div class='flag-issue' style='margin-top:0.3rem;'>Detail: {detail}</div>" if detail else ""
         st.markdown(f"""
         <div class="flag-card">
-            <div class="flag-agent">{flag.get('agent', '?').upper()}</div>
-            <div class="flag-claim">"{flag.get('claim', '—')}"</div>
-            <div class="flag-issue">↳ {flag.get('issue', '—')}</div>
+            <div class="flag-agent">{_e(flag.get('agent', '?')).upper()} &mdash; {issue}</div>
+            <div class="flag-claim">"{_e(flag.get('claim', '—'))}"</div>
+            {detail_html}
         </div>
         """, unsafe_allow_html=True)
 else:
@@ -164,4 +156,4 @@ else:
 
 notes = report.get("guardrail_notes", "")
 if notes:
-    st.markdown(f'<div class="notes-box"><strong>Guardrail Notes</strong><br><br>{notes}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="notes-box"><strong>GuardRail Notes</strong><br><br>{_e(notes)}</div>', unsafe_allow_html=True)

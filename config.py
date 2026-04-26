@@ -6,11 +6,18 @@ load_dotenv()
 
 
 def get_openai_client() -> OpenAI:
-    return OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+    key = os.environ.get("OPENAI_API_KEY", "")
+    if not key:
+        raise EnvironmentError(
+            "OPENAI_API_KEY is not set. "
+            "Add it to your .env file or environment variables and restart the app."
+        )
+    return OpenAI(api_key=key)
 
 
 # OpenAI
-OPENAI_MODEL: str = "gpt-4o"
+OPENAI_MODEL: str = "gpt-4o"          # judge, guardrail, exposure (high-stakes reasoning)
+ANALYST_MODEL: str = "gpt-4o-mini"    # bear, bull, geo analysts (3 calls — biggest cost lever)
 EMBED_MODEL: str = "text-embedding-3-small"
 EMBED_DIM: int = 1536
 
@@ -32,6 +39,7 @@ CLOUD_SQL_CONNECTION_NAME: str = os.environ.get("CLOUD_SQL_CONNECTION_NAME", "")
 
 # SEC EDGAR
 EDGAR_EMAIL: str = os.environ.get("EDGAR_EMAIL", "user@example.com")
+EDGAR_UA: str = f"SupplyChainRiskMonitor {EDGAR_EMAIL}"
 
 # GCP Cloud Storage
 GCS_BUCKET_NAME: str = os.environ.get("GCS_BUCKET_NAME", "supply-chain-risk-raw")

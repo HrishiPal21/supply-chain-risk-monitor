@@ -1,6 +1,7 @@
 from agents.state import AgentState
-from config import get_openai_client, OPENAI_MODEL
+from config import get_openai_client, ANALYST_MODEL
 from tools.retry import chat_with_retry
+from tools.doc_sanitizer import format_docs_safe, DOCUMENT_TRUST_POLICY
 
 SYSTEM_PROMPT = """You are a Bull Analyst specializing in supply chain resilience.
 Identify mitigating factors, strengths, and best-case scenarios in the provided
@@ -14,20 +15,24 @@ Focus on:
 - Company financial strength and capex commitments
 - Positive regulatory tailwinds
 
+CITATION REQUIREMENT: Every specific claim must cite its source document inline
+using the format [DOC N] — e.g. "The company holds 6 months of inventory [DOC 1]."
+If a claim has no supporting document, label it (inferred).
+
 Format your response as:
 ## Bull Case Resilience Analysis
-### Key Strengths (bullet list)
-### Evidence (cited from source docs)
+### Key Strengths (bullet list with [DOC N] citations)
+### Evidence (quoted snippets with [DOC N] references)
 ### Best-Case Scenario
-"""
+""" + DOCUMENT_TRUST_POLICY
 
 
 def bull_analyst(state: AgentState) -> AgentState:
     client = get_openai_client()
-    context = _format_docs(state["retrieved_docs"])
+    context = format_docs_safe(state["retrieved_docs"], max_docs=5)
 
     response = chat_with_retry(client,
-        model=OPENAI_MODEL,
+        model=ANALYST_MODEL,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {
@@ -46,10 +51,6 @@ def bull_analyst(state: AgentState) -> AgentState:
         ],
         temperature=0.3,
     )
-    return {**state, "bull_analysis": response.choices[0].message.content}
+    return {"bull_analysis": response.choices[0].message.content}
 
 
-def _format_docs(docs: list[dict]) -> str:
-    return "\n\n---\n\n".join(
-        f"[{d.get('source', 'unknown')}] {d.get('text', '')}" for d in docs[:8]
-    )
