@@ -4,10 +4,12 @@
 
 **Seven-agent LangGraph pipeline that ingests news, SEC filings, and web content — assesses company-level exposure — then debates risk from bear, bull, and geopolitical angles before delivering a structured, scored verdict.**
 
-[![Python](https://img.shields.io/badge/Python-3.9+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-orchestration-1C3C3C?style=flat-square)](https://github.com/langchain-ai/langgraph)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+**Live app:** https://supply-chain-risk-211330169092.us-central1.run.app
 
 [Features](#features) · [Architecture](#architecture) · [Quick start](#quick-start) · [Evaluation](#evaluation) · [Challenges](#challenges--limitations) · [Security](#security--secrets) · [License](#license)
 
@@ -222,12 +224,23 @@ Full 10-K filings can exceed 100k tokens. The retriever truncates individual doc
 
 ## Deployment
 
-Pushes to **`main`** trigger [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml):
+**Live URL:** https://supply-chain-risk-211330169092.us-central1.run.app
 
-1. Build Docker image → **Google Container Registry**
-2. Deploy to **Cloud Run** (`us-central1`) with Cloud SQL attachment and secrets injected as env vars
+Pushes to **`main`** trigger the Cloud Build CI/CD pipeline (`cloudbuild.yaml`):
 
-Required GitHub Actions secrets: `GCP_SA_KEY`, `GCP_PROJECT_ID`, `CLOUD_SQL_CONNECTION_NAME`, and all API keys from `.env.example`.
+1. Build Docker image → **Artifact Registry** (`us-central1`)
+2. Deploy to **Cloud Run** (`us-central1`) with Cloud SQL attachment and secrets injected from Secret Manager
+
+Infrastructure:
+- **Cloud Run** — serverless, scales to zero when idle
+- **Cloud SQL** (PostgreSQL 15, `db-f1-micro`) — run history persistence
+- **Secret Manager** — all API keys stored securely, injected at runtime
+- **Cloud Build** — CI/CD trigger on push to `main`
+
+To deploy manually:
+```bash
+bash deploy.sh
+```
 
 ---
 
